@@ -13,11 +13,11 @@ A customizable Windows soundboard with a space-inspired UI, personal sound libra
 ![.NET](https://img.shields.io/badge/.NET-8.0-8b7cff?style=for-the-badge&logo=dotnet)
 ![Language](https://img.shields.io/badge/language-C%23-9b7bff?style=for-the-badge&logo=csharp)
 
-- [Features](#features)
-- [Install](#get-started)
-- [Add sounds](#build-your-sound-library)
-- [Performance](#performance--benchmarking)
-- [Roadmap](#roadmap)
+  [Features](#features)
+  [Install](#get-started)
+  [Add sounds](#build-your-sound-library)
+  [Performance](#performance--benchmarking)
+  [Roadmap](#roadmap)
 
 </div>
 
