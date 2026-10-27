@@ -6,7 +6,7 @@
 
 ### Your sounds. Your setup. Your chaos.
 
-A customizable Windows soundboard with a space-inspired UI, personal sound library, desktop pet, Cool Mode, and Discord Rich Presence.
+A customizable Windows soundboard with a space-inspired UI, personal sound library, desktop pet and "Cool Mode".
 
 ![Version](https://img.shields.io/badge/version-2.0.0-66e3ff?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-6c8cff?style=for-the-badge&logo=windows)
