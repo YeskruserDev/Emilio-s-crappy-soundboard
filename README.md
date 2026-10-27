@@ -77,7 +77,6 @@ flowchart TD
     B --> G[Play / Stop / Progress]
     C --> H[Startup Photo or Video]
     C --> I[Desktop Pet]
-    C --> J[Cool Mode]
 ```
 
 User settings and imported sound data are stored separately under `%LOCALAPPDATA%\EmiliosSoundboard`, so they aren't intended to live inside the source folder.
