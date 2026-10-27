@@ -4,7 +4,7 @@
 
 # Emilio's Soundboard
 
-### Your sounds. Your setup. Your chaos.
+### Your sounds. Your setup. Your krissy.
 
 A customizable Windows soundboard with a space-inspired UI, personal sound library, desktop pet and "Cool Mode".
 
