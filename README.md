@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="EmiliosSoundboard/es-logo.png" alt="Emilio's Soundboard logo" width="140" />
+<img src="./EmiliosSoundboard/es-logo.png" alt="Emilio's Soundboard logo" width="140" />
 
 # Emilio's Soundboard
 
