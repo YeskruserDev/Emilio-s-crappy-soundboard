@@ -25,14 +25,6 @@ Build and run
 3. If building from Visual Studio, select the EmiliosSoundboard project as the startup project and build in Release configuration.
 Publish a self-contained Windows build
 Run PUBLISH-PORTABLE.bat on Windows. The script creates a self-contained x64 publish folder and ZIP for distribution. Test the published app before sharing it.
-Optional media assets
-To avoid bundling third-party media that may have separate copyright restrictions, this public source package does not include Mario artwork, Mario Kart music, or the Windows XP startup sound. The app can be used without these optional files. Users can choose their own startup sound and media in Settings.
-
-If you own or have permission to redistribute suitable assets, optional files can be placed beside the built executable using these names:
-- MarioKart.png — optional sprite for Cool Mode
-- RainbowRoad.mp3 — optional Cool Mode music
-- WindowsXPStartup.mp3 — optional startup sound
-Only distribute media you have rights to use. Missing optional files are not included in the project build.
 User data
 The app stores settings and imported sound library data under %LOCALAPPDATA%\EmiliosSoundboard, separate from the source folder.
 Version status
