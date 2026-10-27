@@ -147,6 +147,8 @@ Choose and add a license file before accepting outside contributions or distribu
 
 If something breaks, open an issue with the error log. If you improve it, add the details to `RELEASE-NOTES.md`.
 
+Please do keep in mind, that this is still early in development!
+
 </div>
 
 
