@@ -1,0 +1,15 @@
+EMILIO'S SOUNDBOARD v2.0.0 — QUICK START
+
+1. Extract the entire ZIP into a normal folder.
+2. Install the .NET 8 SDK for Windows if you do not have it:
+   https://dotnet.microsoft.com/download/dotnet/8.0
+3. Double-click INSTALL-AND-CREATE-DESKTOP-SHORTCUT.bat.
+4. Wait for publishing to finish. It creates an App folder and a desktop shortcut.
+5. Launch Emilio's Soundboard from the desktop shortcut whenever you want.
+
+This is a source package, not a prebuilt EXE. The installer publishes a self-contained Windows x64 build.
+
+For a release ZIP, run PUBLISH-PORTABLE.bat and upload the generated release/EmiliosSoundboard-v2-win-x64.zip to a GitHub Release tagged v2.0.0.
+
+All patch notes are maintained in RELEASE-NOTES.md.
+If the build fails, copy the full error output before closing the command window.

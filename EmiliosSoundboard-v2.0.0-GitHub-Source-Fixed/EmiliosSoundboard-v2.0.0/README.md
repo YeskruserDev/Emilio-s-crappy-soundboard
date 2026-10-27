@@ -1,0 +1,48 @@
+# Emilio's Soundboard v2.0.0
+
+A customizable Windows soundboard built with C#, Windows Forms, .NET 8, and NAudio.
+
+## Features
+
+- Animated space-themed interface and searchable sound cards
+- Customizable startup image/video and startup sound
+- Cool Mode with Rainbow Road media
+- Desktop pet with custom image, adjustable size, wandering, pauses, looking around, jumps, and spins
+- Live microphone pitch effects (device-dependent; test on your setup)
+- Discord Rich Presence integration
+- User settings and imported sound library stored separately from the app under `%LOCALAPPDATA%\EmiliosSoundboard`
+
+## Requirements
+
+- Windows 10 or Windows 11, 64-bit
+- .NET 8 SDK to build from source
+- Internet connection on first build to restore NuGet packages
+
+## Quick start
+
+1. Download and extract this repository.
+2. Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) if it is not installed.
+3. Double-click `INSTALL-AND-CREATE-DESKTOP-SHORTCUT.bat` to publish a self-contained Windows x64 app and create a desktop shortcut.
+4. Launch **Emilio's Soundboard** from the shortcut.
+
+To build and run directly from source instead, use `BUILD-AND-RUN.bat` or open `EmiliosSoundboard.sln` in Visual Studio 2022.
+
+## Create a GitHub release build
+
+On Windows, run `PUBLISH-PORTABLE.bat`. It creates `release\EmiliosSoundboard-v2-win-x64\` and, when PowerShell is available, `release\EmiliosSoundboard-v2-win-x64.zip`. Test the app before uploading that ZIP to a GitHub Release tagged `v2.0.0`.
+
+## Adding sounds
+
+Use **+ ADD SOUND** inside the app to import your own audio. You can find sound effects on [Pixabay](https://pixabay.com/sound-effects/), [Mixkit](https://mixkit.co/free-sound-effects/), and [Freesound](https://freesound.org/). Review the license for each file and ensure you have rights to use or redistribute it. “Free to download” does not automatically mean a sound can be redistributed.
+
+## Optional media and rights
+
+The current source package includes `MarioKart.png` and `RainbowRoad.mp3`. Only redistribute these or any custom startup/pet media if you have the necessary rights. `WindowsXPStartup.mp3` is optional and is not bundled by default. Users can choose their own startup and pet media in Settings.
+
+## Patch notes
+
+All historical and future patch notes are maintained in the single [`RELEASE-NOTES.md`](RELEASE-NOTES.md) file. Add new entries there rather than creating separate patch-note files.
+
+## Build status
+
+This package has not been compiled or runtime-tested in this packaging environment. Build and test on Windows before publishing a release. If a build fails, share the complete terminal output.
