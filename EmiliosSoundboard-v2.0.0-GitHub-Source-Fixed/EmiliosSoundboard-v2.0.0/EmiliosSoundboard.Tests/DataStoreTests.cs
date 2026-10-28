@@ -355,6 +355,32 @@ namespace EmiliosSoundboard.Tests
             }
         }
 
+        [Fact]
+        public void SaveThenLoad_KeepsThePerSoundOutputDevice()
+        {
+            using (var tmp = new TempLibrary())
+            {
+                var store = tmp.NewStore();
+                store.Load();
+                string audio = tmp.WriteAudio("cable.wav");
+                var imported = store.ImportNew(audio, "Cable", null);
+                imported.Item.OutputDevice = "CABLE Input (VB-Audio Virtual Cable)";
+                store.Data.Sounds.Add(imported.Item);
+                store.Data.Settings.OutputDevice = "Speakers (Realtek Audio)";
+                store.Data.Settings.VerboseLogging = true;
+
+                Assert.True(store.Save());
+
+                var reloaded = tmp.NewStore();
+                reloaded.Load();
+
+                var item = Assert.Single(reloaded.Data.Sounds);
+                Assert.Equal("CABLE Input (VB-Audio Virtual Cable)", item.OutputDevice);
+                Assert.Equal("Speakers (Realtek Audio)", reloaded.Data.Settings.OutputDevice);
+                Assert.True(reloaded.Data.Settings.VerboseLogging);
+            }
+        }
+
         [Theory]
         [InlineData(0, "0 B")]
         [InlineData(1023, "1023 B")]

@@ -272,7 +272,7 @@ namespace EmiliosSoundboard
                         : shortName;
                     string defaultName = store.UniqueName(CleanName(Path.GetFileNameWithoutExtension(file)), null);
 
-                    string name, imageSource;
+                    string name, imageSource, device;
                     using (var dlg = new SoundDetailsDialog(store, "NAME YOUR SOUND", sub, defaultName, null,
                                                             files.Length > 1, "ADD SOUND", null))
                     {
@@ -281,6 +281,7 @@ namespace EmiliosSoundboard
                         if (r == DialogResult.Ignore) continue;
                         name = store.UniqueName(dlg.SoundName, null);
                         imageSource = dlg.ChosenImagePath;
+                        device = dlg.OutputDevice;
                     }
 
                     ImportResult res;
@@ -291,14 +292,25 @@ namespace EmiliosSoundboard
                     catch (Exception ex)
                     {
                         problems.Add(shortName + "\n    Could not copy the file: " + ex.Message);
+                        Log.Warn("import", "could not copy \"" + file + "\"", ex);
                         continue;
                     }
 
+                    res.Item.OutputDevice = device;
                     store.Data.Sounds.Add(res.Item);
                     AddCardFor(res.Item, 0);
                     added++;
                     lastName = res.Item.Name;
-                    if (res.Warning != null) problems.Add(shortName + "\n    " + res.Warning);
+                    if (res.Warning != null)
+                    {
+                        problems.Add(shortName + "\n    " + res.Warning);
+                        Log.Warn("import", shortName + ": " + res.Warning);
+                    }
+                    else
+                    {
+                        Log.Info("import", "added \"" + res.Item.Name + "\" from " + shortName +
+                                           (string.IsNullOrEmpty(device) ? "" : " (device: " + device + ")"));
+                    }
                 }
 
                 if (added > 0)
@@ -355,12 +367,13 @@ namespace EmiliosSoundboard
             try
             {
                 using (var dlg = new SoundDetailsDialog(store, "EDIT SOUND",
-                    "Change the name or the background of this button.", item.Name,
-                    store.ImagePath(item), false, "SAVE", item))
+                    "Change the name, the background or the playback device of this button.", item.Name,
+                    store.ImagePath(item), false, "SAVE", item, item.OutputDevice))
                 {
                     if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
                     item.Name = store.UniqueName(dlg.SoundName, item);
+                    item.OutputDevice = dlg.OutputDevice;
                     if (dlg.ChosenImagePath != null) await ApplyImage(c, dlg.ChosenImagePath);
                     else if (dlg.RevertImage) DropImage(c);
 

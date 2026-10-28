@@ -126,6 +126,10 @@ namespace EmiliosSoundboard
 
             store.Load();
             var set = store.Data.Settings;
+            ApplyLogLevel();
+            Log.Info("library", store.Data.Sounds.Count + " sound(s) loaded from " + store.Root);
+            if (store.LoadWarning != null) Log.Warn("library", "the saved library could not be read: " + store.LoadWarning);
+            if (!string.IsNullOrEmpty(set.OutputDevice)) Log.Info("audio", "board output device: " + set.OutputDevice);
             // Keep the actual soundboard hidden until a configured startup splash finishes.
             bool hasStartupSplash = (!String.IsNullOrWhiteSpace(set.StartupPhotoPath) && File.Exists(set.StartupPhotoPath)) ||
                                     (!String.IsNullOrWhiteSpace(set.StartupVideoPath) && File.Exists(set.StartupVideoPath));
@@ -174,7 +178,7 @@ namespace EmiliosSoundboard
                         try { Opacity = 1; Activate(); } catch { }
                     });
                     splash.Show();
-                    if (File.Exists(soundPath)) startupAudio.Play("startup-sound", soundPath);
+                    if (File.Exists(soundPath)) startupAudio.Play("startup-sound", soundPath, store.Data.Settings.OutputDevice);
                 }
                 else if (!String.IsNullOrWhiteSpace(photoPath) && File.Exists(photoPath))
                 {
@@ -205,7 +209,7 @@ namespace EmiliosSoundboard
                     splash.Shown += (a, b) => { life.Restart(); closeTimer.Start(); };
                     splash.FormClosed += (a, b) => { try { closeTimer.Stop(); closeTimer.Dispose(); } catch { } };
                     splash.Show();
-                    if (File.Exists(soundPath)) startupAudio.Play("startup-sound", soundPath);
+                    if (File.Exists(soundPath)) startupAudio.Play("startup-sound", soundPath, store.Data.Settings.OutputDevice);
                 }
                 else
                 {
@@ -239,6 +243,13 @@ namespace EmiliosSoundboard
             Theme.AccentSoft = Color.FromArgb(30, accent.R / 3, accent.G / 3, accent.B / 3);
             foreach (Form form in Application.OpenForms)
                 if (form is MainForm main) { main.InvalidateBackdrop(); main.RefreshSearchTheme(); }
+        }
+
+        private void ApplyLogLevel()
+        {
+            var logger = Log.Current;
+            if (logger != null)
+                logger.MinimumLevel = store.Data.Settings.VerboseLogging ? LogLevel.Debug : LogLevel.Info;
         }
 
         private void RefreshSearchTheme()

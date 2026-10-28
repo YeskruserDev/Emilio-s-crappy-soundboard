@@ -28,7 +28,7 @@ namespace EmiliosSoundboard
             if (!IsDisposed && store.Data.Settings.CoolMode)
             {
                 string musicPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RainbowRoad.mp3");
-                if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath); } catch { } }
+                if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath, store.Data.Settings.OutputDevice); } catch (Exception ex) { Log.Warn("audio", "cool mode music could not start", ex); } }
             }
         }
 
@@ -169,7 +169,7 @@ namespace EmiliosSoundboard
                 if (set.CoolMode)
                 {
                     string musicPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RainbowRoad.mp3");
-                    if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath); } catch { } }
+                    if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath, store.Data.Settings.OutputDevice); } catch (Exception ex) { Log.Warn("audio", "cool mode music could not start", ex); } }
                 }
                 else coolMusic.Stop();
                 forceFrame = true;
