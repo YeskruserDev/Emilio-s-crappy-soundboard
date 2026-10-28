@@ -171,6 +171,4 @@ Please do keep in mind, that this is still early in development!
 
 <div align="center">
 
-<img src="./Emilio.JPG" alt="Emilio, who made this soundboard" width="320" />
-
 </div>
