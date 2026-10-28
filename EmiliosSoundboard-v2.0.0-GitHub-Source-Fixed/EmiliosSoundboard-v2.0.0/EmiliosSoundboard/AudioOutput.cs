@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace EmiliosSoundboard
@@ -87,6 +88,49 @@ namespace EmiliosSoundboard
             }
 
             return index;
+        }
+
+        /// <summary>
+        /// True when the stored device is a real endpoint other than the Windows default, so a clip
+        /// routed there also needs a second local playback to stay audible on the user's speakers.
+        /// </summary>
+        public static bool NeedsLocalMonitor(string storedName)
+        {
+            if (string.IsNullOrWhiteSpace(storedName)) return false;
+            if (string.Equals(storedName.Trim(), AudioOutputPicker.SystemDefault, StringComparison.OrdinalIgnoreCase)) return false;
+
+            int index = Resolve(storedName);
+            if (index < 0) return false; // Missing/unresolvable device already falls back to the default.
+
+            try
+            {
+                using (var enumerator = new MMDeviceEnumerator())
+                using (var defaultOutput = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia))
+                {
+                    string selected = Describe(index);
+                    string windowsDefault = defaultOutput.FriendlyName ?? "";
+                    return !NamesReferToSameDevice(selected, windowsDefault);
+                }
+            }
+            catch
+            {
+                // If Windows cannot tell us, keep the locally audible copy rather than going silent.
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Compares a winmm device name (truncated to 31 characters) with a full Windows endpoint
+        /// name. Accepts either direction of truncation.
+        /// </summary>
+        private static bool NamesReferToSameDevice(string a, string b)
+        {
+            a = (a ?? "").Trim();
+            b = (b ?? "").Trim();
+            if (a.Length == 0 || b.Length == 0) return false;
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase) ||
+                   (a.Length >= 24 && b.StartsWith(a, StringComparison.OrdinalIgnoreCase)) ||
+                   (b.Length >= 24 && a.StartsWith(b, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>Name for an index, falling back to a readable description.</summary>

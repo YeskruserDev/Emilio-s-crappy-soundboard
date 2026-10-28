@@ -96,6 +96,15 @@ namespace EmiliosSoundboard
         /// <summary>Draws the static backdrop into any graphics context (cache or screen).</summary>
         private void PaintBackdrop(Graphics g, float w, float h)
         {
+            // Comic Book Mode switches to pure monochrome halftone paper.
+            if (store.Data.Settings.ComicStyleMode)
+            {
+                using (var paper = new LinearGradientBrush(new RectangleF(-1, -1, w + 2, h + 2), Color.White, Color.FromArgb(224, 224, 224), 90f))
+                    g.FillRectangle(paper, -1, -1, w + 2, h + 2);
+                DrawComicOverlay(g, w, h, hazeTime);
+                return;
+            }
+
             var full = new RectangleF(-1, -1, w + 2, h + 2);
             using (var bg = new LinearGradientBrush(full, Color.FromArgb(1, 2, 5), Color.FromArgb(0, 0, 1), 90f))
                 g.FillRectangle(bg, full);

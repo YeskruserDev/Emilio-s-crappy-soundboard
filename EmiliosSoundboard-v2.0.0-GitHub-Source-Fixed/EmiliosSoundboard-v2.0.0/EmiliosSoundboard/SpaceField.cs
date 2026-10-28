@@ -44,6 +44,7 @@ namespace EmiliosSoundboard
 
         private Bitmap glowBitmap;
         private ImageAttributes glowAttr;
+        private Color glowAccent = Color.Empty;
         private float glowAttrAlpha = -1f;
 
         private const float ReactRadius = 150f;
@@ -281,10 +282,10 @@ namespace EmiliosSoundboard
                 hazeAccent = Theme.Blue;
                 Color a = Theme.Blue;
                 Color b = Theme.Violet;
-                hazeBlue = MakeHaze(Color.FromArgb(19, a.R, a.G, a.B));
-                hazeViolet = MakeHaze(Color.FromArgb(17, b.R, b.G, b.B));
-                hazeRose = MakeHaze(Color.FromArgb(9, 120, 55, 145));
-                hazeDeep = MakeHaze(Color.FromArgb(12, 32, 52, 110));
+                hazeBlue = MakeHaze(Color.FromArgb(23, a.R, a.G, a.B));
+                hazeViolet = MakeHaze(Color.FromArgb(20, b.R, b.G, b.B));
+                hazeRose = MakeHaze(Color.FromArgb(11, 120, 55, 145));
+                hazeDeep = MakeHaze(Color.FromArgb(15, 32, 52, 110));
             }
 
             float size = Math.Max(w, h) * 1.22f;
@@ -303,6 +304,17 @@ namespace EmiliosSoundboard
             g.DrawImage(hazeBlue, bx, by, size, size);
             g.DrawImage(hazeRose, rx, ry, size * 0.82f, size * 0.82f);
             g.DrawImage(hazeViolet, vx, vy, size, size);
+            // Two very faint, drifting orbital contours add depth without competing with the sound cards.
+            using (var orbit = new Pen(Color.FromArgb(13, Theme.Blue.R, Theme.Blue.G, Theme.Blue.B), 1f))
+            {
+                float orbitW = w * 0.70f;
+                float orbitH = Math.Max(55f, h * 0.22f);
+                float ox = w * 0.58f - orbitW * 0.5f + (float)Math.Sin(t * 0.012f) * 8f;
+                float oy = h * 0.64f - orbitH * 0.5f + (float)Math.Cos(t * 0.009f) * 5f;
+                g.DrawArc(orbit, ox, oy, orbitW, orbitH, 198f, 118f);
+                orbit.Color = Color.FromArgb(9, Theme.Violet.R, Theme.Violet.G, Theme.Violet.B);
+                g.DrawArc(orbit, ox + 18f, oy + 14f, orbitW - 36f, orbitH - 28f, 18f, 118f);
+            }
             g.InterpolationMode = old;
 
         }
@@ -346,9 +358,19 @@ namespace EmiliosSoundboard
             g.DrawImage(glowBitmap, dest, 0, 0, size, size, GraphicsUnit.Pixel, glowAttr);
         }
 
+        public void NotifyAccentChanged()
+        {
+            if (glowBitmap != null) { glowBitmap.Dispose(); glowBitmap = null; }
+            if (glowAttr != null) { glowAttr.Dispose(); glowAttr = null; }
+            glowAccent = Color.Empty;
+            glowAttrAlpha = -1f;
+        }
+
         private void EnsureGlowBitmap()
         {
-            if (glowBitmap != null) return;
+            if (glowBitmap != null && glowAccent == Theme.Blue) return;
+            if (glowBitmap != null) { glowBitmap.Dispose(); glowBitmap = null; }
+            glowAccent = Theme.Blue;
 
             const int size = 560;
             glowBitmap = new Bitmap(size, size, PixelFormat.Format32bppPArgb);
@@ -381,6 +403,8 @@ namespace EmiliosSoundboard
         {
             brush.Dispose();
             if (glowBitmap != null) { glowBitmap.Dispose(); glowBitmap = null; }
+            glowAccent = Color.Empty;
+            glowAttrAlpha = -1f;
             if (hazeBlue != null) { hazeBlue.Dispose(); hazeBlue = null; }
             if (hazeViolet != null) { hazeViolet.Dispose(); hazeViolet = null; }
             if (hazeRose != null) { hazeRose.Dispose(); hazeRose = null; }

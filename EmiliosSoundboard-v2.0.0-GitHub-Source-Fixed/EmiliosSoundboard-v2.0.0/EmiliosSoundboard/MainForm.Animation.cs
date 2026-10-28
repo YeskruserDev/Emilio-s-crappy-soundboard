@@ -43,6 +43,14 @@ namespace EmiliosSoundboard
             float dt = (float)Math.Min(0.05, clock.Elapsed.TotalSeconds);
             clock.Restart();
             time += dt;
+            if (titleSpinTime > 0f)
+            {
+                titleSpinElapsed += dt;
+                titleSpinTime = Math.Max(0f, 1f - titleSpinElapsed);
+                titleSpinAngle = 360f * Math.Min(1f, titleSpinElapsed);
+                if (titleSpinTime <= 0f) { titleSpinAngle = 0f; titleSpinElapsed = 0f; }
+                forceFrame = true;
+            }
             StepDesktopPet(dt);
             if (store.Data.Settings.DesktopPetEnabled && desktopPetSprite != null) forceFrame = true;
 
@@ -161,6 +169,7 @@ namespace EmiliosSoundboard
             var set = store.Data.Settings;
             float k = set.Intensity / 100f * 1.6f;
             player.Volume = set.SoundVolume / 100f;
+            localMonitorPlayer.Volume = set.SoundVolume / 100f;
             coolMusic.Volume = set.MusicVolume / 100f;
             if (set.CoolMode != previousCoolMode)
             {

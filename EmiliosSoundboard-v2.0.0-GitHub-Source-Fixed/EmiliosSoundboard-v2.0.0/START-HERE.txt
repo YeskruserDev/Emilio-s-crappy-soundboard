@@ -1,4 +1,4 @@
-EMILIO'S SOUNDBOARD v2.0.0 — QUICK START
+EMILIO'S SOUNDBOARD v2.0.1 BETA — QUICK START
 
 1. Extract the entire ZIP into a normal folder.
 2. Install the .NET 8 SDK for Windows if you do not have it:
@@ -9,7 +9,11 @@ EMILIO'S SOUNDBOARD v2.0.0 — QUICK START
 
 This is a source package, not a prebuilt EXE. The installer publishes a self-contained Windows x64 build.
 
-For a release ZIP, run PUBLISH-PORTABLE.bat and upload the generated release/EmiliosSoundboard-v2-win-x64.zip to a GitHub Release tagged v2.0.0.
+For a release ZIP, run PUBLISH-PORTABLE.bat and upload the generated release/EmiliosSoundboard-v2-win-x64.zip to a GitHub Release tagged v2.0.1.
 
 All patch notes are maintained in RELEASE-NOTES.md.
 If the build fails, copy the full error output before closing the command window.
+
+CHAT APP AUDIO ROUTING
+----------------------
+For Discord/WhatsApp, install a virtual audio cable or configure your mixer first. In Voice FX, click AUTO ROUTE to select an available chat route. The Voice FX output is chosen under Settings > VOICE FX OUTPUT (CHAT), and soundboard clips are mirrored to the Windows default output so you can still hear them locally. In the chat app, choose the paired virtual recording device as the microphone. A normal speaker output stays local; this app cannot create a virtual microphone driver by itself.

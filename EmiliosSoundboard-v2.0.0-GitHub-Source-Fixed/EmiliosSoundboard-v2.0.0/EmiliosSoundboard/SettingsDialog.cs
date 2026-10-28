@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 using System.Windows.Forms;
+using NAudio.CoreAudioApi;
 
 namespace EmiliosSoundboard
 {
@@ -12,21 +15,23 @@ namespace EmiliosSoundboard
         private readonly DataStore store;
         private readonly AppSettings settings;
 
-        private ToggleSwitch animToggle, glowToggle, starToggle, hoverToggle, coolModeToggle, petToggle, verboseToggle;
+        private ToggleSwitch animToggle, glowToggle, starToggle, hoverToggle, coolModeToggle, comicModeToggle, petToggle, verboseToggle;
+        private RainbowTextLabel coolModeLabel;
         private GlowSlider intensity, soundVolume, musicVolume, petSize;
         private Label soundVolumeValue, musicVolumeValue, petSizeValue;
         private TextBox backgroundPath;
         private Label intensityValue;
-        private ComboBox accentPicker;
+        private ComboBox accentPicker, resolutionPicker, soundOutputPicker;
         private ComboBox outputPicker;
         private Label outputHint, logSummary;
         private TextBox startupVideoPath, startupPhotoPath, startupSoundPath;
-        private Panel contentPanel;
+        private SpaceBackdropPanel contentPanel;
 
         public SettingsDialog(DataStore store)
         {
             this.store = store;
             settings = store.Data.Settings;
+            Log.Debug("settings", "building settings dialog");
             BackdropEffect = WindowEffects.Parse(settings.WindowEffect);
 
             Text = "Settings";
@@ -37,7 +42,7 @@ namespace EmiliosSoundboard
             MinimumSize = new Size(S(580), S(620));
             StartPosition = FormStartPosition.CenterParent;
             AutoScroll = false;
-            contentPanel = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Theme.Black, Padding = Padding.Empty };
+            contentPanel = new SpaceBackdropPanel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = Color.Transparent, Padding = Padding.Empty };
             Controls.Add(contentPanel);
 
             int left = S(32);
@@ -78,6 +83,26 @@ namespace EmiliosSoundboard
             intensity.SetValueSilently(settings.Intensity);
             contentPanel.Controls.Add(intensity);
             y += S(48);
+
+            var performanceTitle = MakeLabel("PERFORMANCE / WINDOW RESOLUTION", 9.5f, FontStyle.Bold, Theme.Blue);
+            performanceTitle.SetBounds(left, y, width, S(20)); contentPanel.Controls.Add(performanceTitle); y += S(23);
+            resolutionPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(14, 18, 31), ForeColor = Theme.CoolWhite, FlatStyle = FlatStyle.Flat };
+            resolutionPicker.Items.AddRange(new object[] { "Unlocked (resizable)", "1280 x 720 (standard)", "1024 x 576 (performance)", "960 x 540 (low performance)" });
+            resolutionPicker.SetBounds(left, y, S(270), S(30));
+            string initialResolution = String.IsNullOrWhiteSpace(settings.WindowResolution) ? "Unlocked" : settings.WindowResolution;
+            resolutionPicker.SelectedItem = ResolutionLabel(initialResolution);
+            if (resolutionPicker.SelectedIndex < 0) resolutionPicker.SelectedIndex = 0;
+            resolutionPicker.SelectedIndexChanged += (s, e) =>
+            {
+                string selected = ResolutionValue(Convert.ToString(resolutionPicker.SelectedItem));
+                settings.WindowResolution = selected;
+                foreach (Form form in Application.OpenForms)
+                    if (form is MainForm main) main.ApplyWindowResolution(selected);
+            };
+            contentPanel.Controls.Add(resolutionPicker);
+            var performanceDesc = MakeLabel("Fixed window sizes can reduce rendering load on slower PCs. Choose unlocked to resize freely.", 8.5f, FontStyle.Regular, Theme.Muted);
+            performanceDesc.SetBounds(left + S(280), y + S(1), width - S(280), S(42)); contentPanel.Controls.Add(performanceDesc);
+            y += S(42);
 
             var soundTitle = MakeLabel("SOUND EFFECT VOLUME", 10f, FontStyle.Bold, Theme.CoolWhite);
             soundTitle.SetBounds(left, y, width - S(70), S(22)); contentPanel.Controls.Add(soundTitle);
@@ -127,15 +152,55 @@ namespace EmiliosSoundboard
                 Log.Info("audio", "playback device list refreshed");
             };
 
+            var voiceOutputTitle = MakeLabel("VOICE FX OUTPUT (CHAT)", 10f, FontStyle.Bold, Theme.CoolWhite);
+            voiceOutputTitle.SetBounds(left, y, width, S(22)); contentPanel.Controls.Add(voiceOutputTitle); y += S(24);
+            soundOutputPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(14, 18, 31), ForeColor = Theme.CoolWhite, FlatStyle = FlatStyle.Flat, DropDownWidth = 440 };
+            soundOutputPicker.SetBounds(left, y, width, S(30));
+            PopulateSoundOutputPicker();
+            soundOutputPicker.SelectedIndexChanged += (s, e) =>
+            {
+                var selected = soundOutputPicker.SelectedItem as SoundOutputChoice;
+                settings.SoundOutputDeviceId = selected == null ? "" : selected.Id;
+            };
+            contentPanel.Controls.Add(soundOutputPicker); y += S(34);
+            var voiceOutputDesc = MakeLabel("Processed microphone audio is sent to this endpoint. For Discord / WhatsApp, choose the paired virtual recording device as the microphone; GoXLR needs a mixer route to the mic mix. Soundboard routing above stays independent.", 8.5f, FontStyle.Regular, Theme.Muted);
+            voiceOutputDesc.SetBounds(left, y, width, S(42)); contentPanel.Controls.Add(voiceOutputDesc); y += S(48);
+
             // Easter egg mode
-            var coolLabel = MakeLabel("COOL MODE  •  RAINBOW ROAD", 10f, FontStyle.Bold, Theme.Blue);
-            coolLabel.SetBounds(left, y, width - S(78), S(24)); contentPanel.Controls.Add(coolLabel);
+            coolModeLabel = new RainbowTextLabel
+            {
+                Text = "COOL MODE  •  RAINBOW ROAD",
+                Font = Theme.MakeFont(10f, FontStyle.Bold),
+                ForeColor = Theme.Blue,
+                BackColor = Color.Transparent,
+                Animated = settings.CoolMode
+            };
+            coolModeLabel.SetBounds(left, y, width - S(78), S(24)); contentPanel.Controls.Add(coolModeLabel);
             coolModeToggle = new ToggleSwitch();
             coolModeToggle.SetBounds(left + width - S(60), y, S(60), S(34));
             coolModeToggle.SetCheckedSilently(settings.CoolMode); contentPanel.Controls.Add(coolModeToggle);
             var coolDesc = MakeLabel("Unlocks a colourful kart-racing-inspired cosmic theme.", 8.5f, FontStyle.Regular, Theme.Muted);
             coolDesc.SetBounds(left, y + S(23), width, S(19)); contentPanel.Controls.Add(coolDesc);
-            coolModeToggle.CheckedChanged += (s, e) => settings.CoolMode = coolModeToggle.Checked;
+            coolModeToggle.CheckedChanged += (s, e) =>
+            {
+                settings.CoolMode = coolModeToggle.Checked;
+                if (coolModeLabel != null) coolModeLabel.Animated = settings.CoolMode;
+            };
+            y += S(48);
+
+            // Optional pop-art skin applied across the main window and themed dialogs.
+            var comicTitle = MakeLabel("COMIC BOOK MODE", 10f, FontStyle.Bold, Color.FromArgb(255, 220, 75));
+            comicTitle.SetBounds(left, y, width - S(78), S(24)); contentPanel.Controls.Add(comicTitle);
+            comicModeToggle = new ToggleSwitch();
+            comicModeToggle.SetBounds(left + width - S(60), y - S(2), S(60), S(34));
+            comicModeToggle.SetCheckedSilently(settings.ComicStyleMode); contentPanel.Controls.Add(comicModeToggle);
+            var comicDesc = MakeLabel("Ink outlines, halftone space dots, punchy pop-art buttons and bolder comic lettering.", 8.5f, FontStyle.Regular, Theme.Muted);
+            comicDesc.SetBounds(left, y + S(22), width, S(20)); contentPanel.Controls.Add(comicDesc);
+            comicModeToggle.CheckedChanged += (s, e) =>
+            {
+                settings.ComicStyleMode = comicModeToggle.Checked;
+                MainForm.ApplyComicStyle(settings.ComicStyleMode);
+            };
             y += S(48);
 
             // Desktop pet: user-supplied image with slow wandering and occasional jump/spin animation.
@@ -173,26 +238,73 @@ namespace EmiliosSoundboard
             petSizeDesc.SetBounds(left, y + S(30), width, S(20)); contentPanel.Controls.Add(petSizeDesc);
             y += S(58);
 
-            // Future hardware mode scaffold; deliberately disabled until proper device integration is implemented.
-            var goxlr = new GlowButton { Text = "GoXLR MODE  •  PLANNED", Style = GlowStyle.Secondary, Enabled = false };
-            goxlr.SetBounds(left, y, S(235), S(34)); contentPanel.Controls.Add(goxlr);
-            var goxlrDesc = MakeLabel("Future update: routing profiles and mixer controls for GoXLR.", 8f, FontStyle.Regular, Theme.Muted);
+            // GoXLR support uses the device's normal Windows audio endpoints. It does not
+            // directly control physical faders, lighting or GoXLR profiles.
+            var goxlr = new GlowButton { Text = "GOXLR AUDIO SETUP", Style = GlowStyle.Secondary };
+            goxlr.SetBounds(left, y, S(235), S(34));
+            goxlr.Click += (s, e) => MessageBox.Show(this,
+                "GoXLR audio endpoint support is available in Voice FX.\n\n" +
+                "1. Connect your GoXLR and make sure Windows detects its recording and playback devices.\n" +
+                "2. Open Voice FX and click REFRESH. GoXLR / TC-Helicon endpoints are marked [GoXLR].\n" +
+                "3. Choose the microphone/input endpoint and the playback endpoint you want the processed voice sent to.\n" +
+                "4. In Discord or another app, select the matching GoXLR virtual recording device as that app's microphone.\n\n" +
+                "Use headphones and avoid sending the processed output back into the selected input. This is audio-device routing support; direct control of GoXLR faders, lighting and mixer profiles is not included.",
+                "GoXLR audio setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            contentPanel.Controls.Add(goxlr);
+            var goxlrDesc = MakeLabel("Voice FX detects GoXLR / TC-Helicon audio endpoints. Direct mixer controls are not included.", 8f, FontStyle.Regular, Theme.Muted);
             goxlrDesc.SetBounds(left + S(245), y + S(2), width - S(245), S(34)); contentPanel.Controls.Add(goxlrDesc);
             y += S(44);
+
+            var cableSetup = new GlowButton { Text = "GET VB-CABLE DRIVER", Style = GlowStyle.Secondary };
+            cableSetup.SetBounds(left, y, S(200), S(34));
+            cableSetup.Click += (s, e) =>
+            {
+                try { Process.Start(new ProcessStartInfo("https://vb-audio.com/Cable/") { UseShellExecute = true }); }
+                catch (Exception ex) { MessageBox.Show(this, "Open https://vb-audio.com/Cable/ to install a virtual audio cable.\n\n" + ex.Message, "Virtual microphone setup", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            };
+            contentPanel.Controls.Add(cableSetup);
+            var cableDesc = MakeLabel("A virtual audio driver is required for chat apps to receive processed audio. It must be installed separately; it cannot be bundled as a normal app file.", 8f, FontStyle.Regular, Theme.Muted);
+            cableDesc.SetBounds(left + S(210), y + S(1), width - S(210), S(38)); contentPanel.Controls.Add(cableDesc);
+            y += S(46);
 
             // Appearance customization
             y += S(2);
             var appearanceTitle = MakeLabel("APPEARANCE", 8.5f, FontStyle.Bold, Theme.Blue);
             appearanceTitle.SetBounds(left, y, width, S(20)); contentPanel.Controls.Add(appearanceTitle); y += S(24);
-            accentPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(14, 18, 31), ForeColor = Theme.CoolWhite };
-            accentPicker.Items.AddRange(new object[] { "Blue", "Violet", "Cyan", "Green", "Pink", "Orange", "Red", "White" });
-            accentPicker.SelectedItem = String.IsNullOrWhiteSpace(settings.AccentColor) ? "Blue" : settings.AccentColor;
-            if (accentPicker.SelectedIndex < 0) accentPicker.SelectedIndex = 0;
-            accentPicker.SetBounds(left, y, S(180), S(30));
-            accentPicker.SelectedIndexChanged += (s, e) => { settings.AccentColor = Convert.ToString(accentPicker.SelectedItem); MainForm.ApplyAccent(settings.AccentColor); };
+            accentPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(14, 18, 31), ForeColor = Theme.CoolWhite, FlatStyle = FlatStyle.Flat };
+            accentPicker.Items.AddRange(new object[] { "Blue", "Violet", "Cyan", "Green", "Pink", "Orange", "Red", "White", "Custom" });
+            string savedAccent = String.IsNullOrWhiteSpace(settings.AccentColor) ? "Blue" : settings.AccentColor;
+            string[] namedAccents = { "Blue", "Violet", "Cyan", "Green", "Pink", "Orange", "Red", "White" };
+            accentPicker.SelectedItem = Array.Exists(namedAccents, a => String.Equals(a, savedAccent, StringComparison.OrdinalIgnoreCase)) ? savedAccent : "Custom";
+            if (accentPicker.SelectedIndex < 0) accentPicker.SelectedItem = "Blue";
+            accentPicker.SetBounds(left, y, S(150), S(30));
+            accentPicker.SelectedIndexChanged += (s, e) =>
+            {
+                string selected = Convert.ToString(accentPicker.SelectedItem);
+                if (!String.Equals(selected, "Custom", StringComparison.OrdinalIgnoreCase))
+                {
+                    settings.AccentColor = selected;
+                    MainForm.ApplyAccent(settings.AccentColor);
+                }
+            };
             contentPanel.Controls.Add(accentPicker);
-            var accentLabel = MakeLabel("Changes highlights, borders, glow and progress accents", 9f, FontStyle.Regular, Theme.Muted);
-            accentLabel.SetBounds(left + S(194), y + S(5), width - S(194), S(22)); contentPanel.Controls.Add(accentLabel); y += S(40);
+            var pickAccent = new GlowButton { Text = "COLOUR WHEEL", Style = GlowStyle.Secondary };
+            pickAccent.SetBounds(left + S(160), y - S(1), S(126), S(32));
+            pickAccent.Click += (s, e) =>
+            {
+                using (var picker = new ColorWheelDialog(Theme.Blue))
+                {
+                    if (picker.ShowDialog(this) == DialogResult.OK)
+                    {
+                        settings.AccentColor = ColorTranslator.ToHtml(picker.SelectedColor).ToUpperInvariant();
+                        if (accentPicker.Items.Contains("Custom")) accentPicker.SelectedItem = "Custom";
+                        MainForm.ApplyAccent(settings.AccentColor);
+                    }
+                }
+            };
+            contentPanel.Controls.Add(pickAccent);
+            var accentLabel = MakeLabel("Choose a preset or pick any custom accent colour. Search, buttons, glow and progress use the accent.", 8.5f, FontStyle.Regular, Theme.Muted);
+            accentLabel.SetBounds(left, y + S(33), width, S(22)); contentPanel.Controls.Add(accentLabel); y += S(60);
 
             // Window material. Mica and Acrylic are DWM compositor effects, so they show on the
             // window frame and title bar; the painted content area stays opaque.
@@ -320,6 +432,14 @@ namespace EmiliosSoundboard
             path.AutoEllipsis = true;
             path.SetBounds(left, y, width, S(20));
             contentPanel.Controls.Add(path);
+            y += S(24);
+
+            var versionTitle = MakeLabel("EMILIO'S SOUNDBOARD  •  VERSION 2.0.1 BETA", 8.5f, FontStyle.Bold, Theme.CoolWhite);
+            versionTitle.SetBounds(left, y, width, S(22));
+            contentPanel.Controls.Add(versionTitle);
+            var versionNote = MakeLabel("BETA build — features and behaviour may change.", 8f, FontStyle.Regular, Theme.Muted);
+            versionNote.SetBounds(left, y + S(20), width, S(18));
+            contentPanel.Controls.Add(versionNote);
 
             int btnY = ClientSize.Height - S(62);
             contentPanel.Padding = new Padding(0, 0, 0, S(72));
@@ -351,6 +471,64 @@ namespace EmiliosSoundboard
                 settings.Intensity = intensity.Value;
                 intensityValue.Text = intensity.Value + "%";
             };
+            Log.Debug("settings", "settings dialog built");
+        }
+
+        private void PopulateSoundOutputPicker()
+        {
+            soundOutputPicker.Items.Clear();
+            soundOutputPicker.Items.Add(new SoundOutputChoice("", "Default Windows output"));
+            var endpoints = new List<SoundOutputChoice>();
+            try
+            {
+                using (var enumerator = new MMDeviceEnumerator())
+                {
+                    var devices = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                    for (int i = 0; i < devices.Count; i++)
+                    {
+                        using (var endpoint = devices[i]) endpoints.Add(new SoundOutputChoice(endpoint.ID, endpoint.FriendlyName));
+                    }
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("Could not enumerate Voice FX output devices: " + ex); }
+
+            foreach (var endpoint in endpoints.OrderByDescending(x => x.IsChatRoute).ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+                soundOutputPicker.Items.Add(endpoint);
+
+            string selectedId = settings.SoundOutputDeviceId ?? "";
+            for (int i = 0; i < soundOutputPicker.Items.Count; i++)
+            {
+                var item = soundOutputPicker.Items[i] as SoundOutputChoice;
+                if (item != null && String.Equals(item.Id, selectedId, StringComparison.OrdinalIgnoreCase))
+                { soundOutputPicker.SelectedIndex = i; return; }
+            }
+            settings.SoundOutputDeviceId = ""; // A previously selected endpoint may have been unplugged.
+            soundOutputPicker.SelectedIndex = 0;
+        }
+
+        private sealed class SoundOutputChoice
+        {
+            public string Id { get; private set; }
+            public string Name { get; private set; }
+            public bool IsChatRoute
+            {
+                get
+                {
+                    return Name.IndexOf("cable input", StringComparison.OrdinalIgnoreCase) >= 0
+                        || Name.IndexOf("vb-audio", StringComparison.OrdinalIgnoreCase) >= 0
+                        || Name.IndexOf("virtual cable", StringComparison.OrdinalIgnoreCase) >= 0
+                        || Name.IndexOf("voicemeeter input", StringComparison.OrdinalIgnoreCase) >= 0
+                        || Name.IndexOf("goxlr", StringComparison.OrdinalIgnoreCase) >= 0
+                        || Name.IndexOf("tc-helicon", StringComparison.OrdinalIgnoreCase) >= 0
+                        || Name.IndexOf("tc helicon", StringComparison.OrdinalIgnoreCase) >= 0;
+                }
+            }
+            public SoundOutputChoice(string id, string name) { Id = id ?? ""; Name = name ?? "Unknown output"; }
+            public override string ToString()
+            {
+                if (String.IsNullOrWhiteSpace(Id)) return Name;
+                return IsChatRoute ? "[VIRTUAL / MIXER ROUTE] " + Name : Name;
+            }
         }
 
         private ToggleSwitch AddToggleRow(ref int y, int left, int width, string title, string description, bool value)
@@ -394,10 +572,16 @@ namespace EmiliosSoundboard
             starToggle.Checked = settings.StarReaction;
             hoverToggle.Checked = settings.HoverAnimations;
             coolModeToggle.Checked = settings.CoolMode;
+            if (coolModeLabel != null) coolModeLabel.Animated = settings.CoolMode;
+            if (comicModeToggle != null) comicModeToggle.Checked = settings.ComicStyleMode;
             if (petToggle != null) petToggle.Checked = settings.DesktopPetEnabled;
             if (petSize != null) { petSize.SetValueSilently(settings.DesktopPetSize); if (petSizeValue != null) petSizeValue.Text = settings.DesktopPetSize + "%"; }
             intensity.Value = settings.Intensity;
             accentPicker.SelectedItem = settings.AccentColor;
+            if (resolutionPicker != null) resolutionPicker.SelectedItem = "Unlocked (resizable)";
+            if (soundOutputPicker != null) soundOutputPicker.SelectedIndex = 0;
+            foreach (Form form in Application.OpenForms)
+                if (form is MainForm main) main.ApplyWindowResolution("Unlocked");
             startupVideoPath.Text = settings.StartupVideoPath ?? "";
             if (startupPhotoPath != null) startupPhotoPath.Text = settings.StartupPhotoPath ?? "";
             if (startupSoundPath != null) startupSoundPath.Text = settings.StartupSoundPath ?? "";
@@ -411,19 +595,39 @@ namespace EmiliosSoundboard
             RefreshLogSummary();
             FillOutputPicker(settings.OutputDevice);
             MainForm.ApplyAccent(settings.AccentColor);
+            MainForm.ApplyComicStyle(settings.ComicStyleMode);
         }
 
         private void OpenFolder()
         {
             try
             {
-                Process.Start("explorer.exe", "\"" + store.Root + "\"");
+                PlatformServices.OpenFolder(store.Root);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, "Could not open the folder:\n" + ex.Message, "Settings",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+        }
+
+        private static string ResolutionLabel(string value)
+        {
+            switch ((value ?? "Unlocked").Trim())
+            {
+                case "1280 x 720": return "1280 x 720 (standard)";
+                case "1024 x 576": return "1024 x 576 (performance)";
+                case "960 x 540": return "960 x 540 (low performance)";
+                default: return "Unlocked (resizable)";
+            }
+        }
+
+        private static string ResolutionValue(string label)
+        {
+            if (label != null && label.StartsWith("1280 x 720", StringComparison.Ordinal)) return "1280 x 720";
+            if (label != null && label.StartsWith("1024 x 576", StringComparison.Ordinal)) return "1024 x 576";
+            if (label != null && label.StartsWith("960 x 540", StringComparison.Ordinal)) return "960 x 540";
+            return "Unlocked";
         }
 
         // ------------------------------------------------------------------ output device
@@ -490,7 +694,7 @@ namespace EmiliosSoundboard
 
             outputHint.Text = string.Equals(selected, AudioOutputPicker.SystemDefault, StringComparison.OrdinalIgnoreCase)
                 ? "Follows whatever Windows uses as the default output. Pick a virtual cable here to send sounds to Discord or OBS."
-                : "Sounds play on this device. Use a virtual cable to make them audible in Discord while your mic stays clean.";
+                : "Sounds play on this device and are mirrored to your Windows default output so you can still hear them locally. Use a virtual cable to feed Discord while your mic stays clean.";
         }
 
         // ------------------------------------------------------------------ diagnostics
@@ -499,7 +703,9 @@ namespace EmiliosSoundboard
         {
             var logger = Log.Current;
             if (logger != null)
-                logger.MinimumLevel = settings.VerboseLogging ? LogLevel.Debug : LogLevel.Info;
+                logger.MinimumLevel = (Program.VerboseRequested || settings.VerboseLogging)
+                    ? LogLevel.Debug
+                    : LogLevel.Info;
         }
 
         private string LogSummaryText()

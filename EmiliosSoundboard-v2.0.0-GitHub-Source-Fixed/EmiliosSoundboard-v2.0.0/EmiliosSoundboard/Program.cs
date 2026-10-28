@@ -20,17 +20,21 @@ namespace EmiliosSoundboard
             }
         }
 
+        /// <summary>True when the process was started with --verbose/--debug/--log/--selftest.</summary>
+        internal static bool VerboseRequested { get; private set; }
+
         [STAThread]
         private static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            VerboseRequested = HasVerboseFlag(args);
             AppLogger logger = null;
             try
             {
                 logger = new AppLogger(LogFolder);
-                logger.MinimumLevel = HasVerboseFlag(args) ? LogLevel.Debug : LogLevel.Info;
+                logger.MinimumLevel = VerboseRequested ? LogLevel.Debug : LogLevel.Info;
                 Log.Install(logger);
             }
             catch (Exception ex)
@@ -56,14 +60,20 @@ namespace EmiliosSoundboard
                 if (Log.Current != null) Log.Current.Dispose();
             };
 
+            bool selfTest = HasFlag(args, "selftest");
             Log.Info("app", "starting Emilio's Soundboard " + Application.ProductVersion +
                             " on " + Environment.OSVersion.VersionString +
-                            " (" + (Environment.Is64BitProcess ? "64-bit" : "32-bit") + " process)");
+                            " (" + (Environment.Is64BitProcess ? "64-bit" : "32-bit") + " process)" +
+                            (selfTest ? " [self-test]" : ""));
             Log.Info("app", "log folder: " + LogFolder);
 
             try
             {
-                Application.Run(new MainForm());
+                var mainForm = new MainForm();
+                // Run after the message loop is pumping, so dialog Show/Close behaves like a real
+                // user session instead of running inside the Form.Shown callback.
+                if (selfTest) mainForm.Shown += (s, e) => mainForm.BeginInvoke(new Action(mainForm.RunSelfTest));
+                Application.Run(mainForm);
             }
             catch (Exception ex)
             {
@@ -78,14 +88,16 @@ namespace EmiliosSoundboard
 
         private static bool HasVerboseFlag(string[] args)
         {
+            return HasFlag(args, "verbose") || HasFlag(args, "debug") || HasFlag(args, "log") || HasFlag(args, "selftest");
+        }
+
+        private static bool HasFlag(string[] args, string name)
+        {
             if (args == null) return false;
             foreach (string arg in args)
             {
                 string a = (arg ?? "").Trim().TrimStart('-', '/');
-                if (string.Equals(a, "verbose", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(a, "debug", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(a, "log", StringComparison.OrdinalIgnoreCase))
-                    return true;
+                if (string.Equals(a, name, StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
         }

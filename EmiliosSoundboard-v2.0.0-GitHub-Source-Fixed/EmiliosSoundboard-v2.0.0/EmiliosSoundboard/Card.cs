@@ -6,7 +6,7 @@ using System.IO;
 
 namespace EmiliosSoundboard
 {
-    internal enum HitKind { None, Add, Settings, Card, Empty, VoiceFx, StopPlayback }
+    internal enum HitKind { None, Add, Settings, Card, Empty, VoiceFx, StopPlayback, Title }
 
     internal enum CardPart { Body, Play, Delete, Edit }
 

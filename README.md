@@ -2,13 +2,13 @@
 
 <img src="./es-logo.png" alt="Emilio's Soundboard logo" width="140" />
 
-# Emilio's Soundboard
-
+# Emilio's Slopboard
+## very sloppy, may steal sensitive data 
 ### Your sounds. Your setup. Your krissy.
 
 A customizable Windows soundboard with a space-inspired UI, personal sound library, desktop pet and "Cool Mode".
 
-![Version](https://img.shields.io/badge/version-2.0.0-66e3ff?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-2.0.1-66e3ff?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-6c8cff?style=for-the-badge&logo=windows)
 ![.NET](https://img.shields.io/badge/.NET-8.0-8b7cff?style=for-the-badge&logo=dotnet)
 ![Language](https://img.shields.io/badge/language-C%23-9b7bff?style=for-the-badge&logo=csharp)
@@ -30,15 +30,19 @@ A customizable Windows soundboard with a space-inspired UI, personal sound libra
 - **Space-inspired UI:** Dark visual theme, animated background, search, and sorting.
 - **Desktop pet:** Choose a custom image, resize it up to 300%, and let it wander, pause, look around, jump, and spin. The pet stays inside the app window.
 - **Cool Mode:** Rainbow Road visuals, kart animation, and mode-specific music.
+- **Comic Book Mode:** Monochrome ink outlines, halftone space dots and pop-art controls.
 - **Startup media:** Choose a startup photo or video, with a popup-style presentation and fade transitions.
-- **Voice FX:** Live microphone pitch effects. Device and runtime testing is still recommended.
+- **Voice FX:** Live microphone pitch effects with coarse/fine tuning, TEST MIC, saved presets, AUTO ROUTE and GoXLR / TC-Helicon endpoint labels. Device and runtime testing is still recommended.
+- **Custom accent colour:** Use the colour wheel to recolour the search UI, cursor glow, progress bar and labels.
+- **Window resolution:** Lock the main window to 1280x720, 1024x576 or 960x540, or keep it resizable.
 - **Discord Rich Presence:** Show Soundboard activity in Discord when the Discord desktop app and integration are available.
 - **Personal settings:** Keep settings and imported sound data separate from the app install folder.
-- **Output device routing:** Send sounds to any playback device - pick a virtual cable to make them audible in Discord or OBS, globally or per sound.
+- **Output device routing:** Send sounds to any playback device - pick a virtual cable to make them audible in Discord or OBS, globally or per sound. Clips routed away from the default device are mirrored to your speakers so you can still hear them.
+- **Chat routing:** Voice FX can send processed microphone audio to a separate chat endpoint with AUTO ROUTE detection for VB-CABLE, Voicemeeter and GoXLR.
 - **Logging:** Rolling daily log with a diagnostics panel in settings (open the folder, copy the last 200 lines for a bug report).
 - **Window material:** Optional Mica or Acrylic on the settings window (Windows 11 22H2 or newer).
 
-> **Status note:** v2.0.0 is a source release. The project still needs a successful build and runtime test on Windows before its behaviour can be considered verified. Voice FX in particular should be tested with your actual microphone and output devices.
+> **Status note:** v2.0.1 compiles cleanly, the core tests pass, and a runtime self-test covers startup, painting, playback-device discovery, silent playback, accent/Comic Book Mode, window resolutions, Settings and Voice FX rendering, and graceful shutdown. Voice FX microphone processing and real Discord/OBS virtual-cable routing still need a manual test with your actual devices.
 
 ## Get started
 
@@ -159,7 +163,7 @@ Choose and add a license file before accepting outside contributions or distribu
 
 <div align="center">
 
-**Made by Emilio · v2.0.0**
+**Made by Emilio - v2.0.1**
 
 If something breaks, open an issue with the error log. If you improve it, add the details to `RELEASE-NOTES.md`.
 

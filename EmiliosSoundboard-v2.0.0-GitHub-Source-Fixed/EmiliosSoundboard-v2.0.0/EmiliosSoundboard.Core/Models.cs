@@ -34,6 +34,10 @@ namespace EmiliosSoundboard
         public bool StarReaction = true;
         public bool HoverAnimations = true;
         public bool CoolMode = false;
+
+        /// <summary>Enables bold outlines, halftone dots and pop-art colours throughout the UI.</summary>
+        public bool ComicStyleMode = false;
+
         public bool DesktopPetEnabled = false;
         public string DesktopPetImagePath = "";
         /// <summary>Desktop pet display size as a percentage (40-180).</summary>
@@ -43,6 +47,9 @@ namespace EmiliosSoundboard
         public int Intensity = 60;
 
         public string AccentColor = "Blue";
+
+        /// <summary>Unlocked (resizable) or a supported fixed client-window resolution.</summary>
+        public string WindowResolution = "Unlocked";
 
         /// <summary>Window material for dialogs: "Mica", "Acrylic" or "Off". Windows 11 only.</summary>
         public string WindowEffect = "Mica";
@@ -61,6 +68,12 @@ namespace EmiliosSoundboard
         /// </summary>
         public string OutputDevice = "";
 
+        /// <summary>
+        /// Shared Windows render endpoint for processed Voice FX, by endpoint ID; blank means the
+        /// default output. The soundboard keeps its own name-based routing above.
+        /// </summary>
+        public string SoundOutputDeviceId = "";
+
         /// <summary>When true the log records Debug/Trace detail. Useful for bug reports.</summary>
         public bool VerboseLogging = false;
 
@@ -71,11 +84,13 @@ namespace EmiliosSoundboard
             StarReaction = true;
             HoverAnimations = true;
             CoolMode = false;
+            ComicStyleMode = false;
             DesktopPetEnabled = false;
             DesktopPetImagePath = "";
             DesktopPetSize = 100;
             Intensity = 60;
             AccentColor = "Blue";
+            WindowResolution = "Unlocked";
             WindowEffect = "Mica";
             StartupVideoPath = "";
             StartupPhotoPath = "";
@@ -85,6 +100,7 @@ namespace EmiliosSoundboard
             SoundVolume = 70;
             MusicVolume = 55;
             OutputDevice = "";
+            SoundOutputDeviceId = "";
             VerboseLogging = false;
         }
     }

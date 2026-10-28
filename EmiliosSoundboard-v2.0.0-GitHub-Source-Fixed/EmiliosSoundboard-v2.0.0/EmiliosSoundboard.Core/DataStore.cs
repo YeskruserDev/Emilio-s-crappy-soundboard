@@ -110,6 +110,8 @@ namespace EmiliosSoundboard
         {
             if (Data.Settings == null) Data.Settings = new AppSettings();
             Data.Settings.Intensity = Math.Max(0, Math.Min(100, Data.Settings.Intensity));
+            if (string.IsNullOrWhiteSpace(Data.Settings.WindowResolution)) Data.Settings.WindowResolution = "Unlocked";
+            if (Data.Settings.SoundOutputDeviceId == null) Data.Settings.SoundOutputDeviceId = "";
             if (Data.Sounds == null) Data.Sounds = new List<SoundItem>();
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
