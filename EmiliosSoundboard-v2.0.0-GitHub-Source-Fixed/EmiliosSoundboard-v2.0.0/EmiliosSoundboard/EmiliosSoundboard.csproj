@@ -11,6 +11,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app-icon.ico</ApplicationIcon>
+    <!-- DPI awareness lives here instead of app.manifest (WFAC010). SystemAware matches the
+         previous dpiAware="true" setting exactly, so rendering behaviour is unchanged. -->
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Product>Emilio's Soundboard</Product>
@@ -19,6 +22,9 @@
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EmiliosSoundboard.Core\EmiliosSoundboard.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="app-icon.ico">

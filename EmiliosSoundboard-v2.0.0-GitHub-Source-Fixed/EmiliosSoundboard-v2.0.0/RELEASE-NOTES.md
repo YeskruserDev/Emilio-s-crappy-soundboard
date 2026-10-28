@@ -2,6 +2,16 @@
 
 This is the single, cumulative patch-notes file. New changes should be appended here; do not create separate release-note files for future updates.
 
+## Structure cleanup, warning-free build, first test suite (2026-10-28)
+- Split the 1361-line `MainForm.cs` into partial files by job: `MainForm.cs` (state, startup, lifecycle), `MainForm.Library.cs` (cards, search, sorting, import, edit, delete), `MainForm.Animation.cs` (the 60 Hz loop, space field, desktop pet), `MainForm.Input.cs` (hit testing, mouse and keyboard), `MainForm.Playback.cs` (playback, progress, toasts, settings). No drawing or event code was rewritten; member bodies moved verbatim.
+- Added `EmiliosSoundboard.Core`, a platform-neutral .NET 8 project holding the library format and storage. Image decoding stays in the app behind the new `IImageImporter` seam, so the storage layer no longer depends on System.Drawing.
+- `DataStore` can now be pointed at an explicit folder (`new DataStore(root)`), which is what makes the storage tests possible.
+- Fixed all 6 compiler warnings: renamed `ThemedForm.Scale` to `ScaleFactor` (it hid `Control.Scale`), used the existing `margin` constant in `LayoutCards` instead of a duplicated literal, removed the unused `left` local, removed the unused `wet` and `save` fields in Voice FX, moved DPI awareness from `app.manifest` into `ApplicationHighDpiMode` (SystemAware, same behaviour as before).
+- Deleted dead code with no callers: `MainForm.LiveCount`, `MainForm.ContentWidth`, `Theme.MakeLightFont`, `Theme.Lerp`, `Theme.FormatTime`, `ImageUtil.MakeCover`.
+- Added `EmiliosSoundboard.Tests` (xunit, 32 tests) covering the library round-trip, corrupt-file recovery, sanitising, unique names, import, delete safety and byte formatting. The tests run on Linux and Windows.
+- Added a GitHub Actions workflow: tests on Ubuntu, warning-free build of the whole solution plus tests on Windows.
+- The WinForms UI still has not been run on Windows. Layout, Voice FX with real devices and Discord presence remain runtime-unverified.
+
 ## Latest update — Search UI refresh
 - Removed the liquid-glass appearance from the search panel.
 - Replaced it with a clean, opaque midnight-navy panel, restrained cyan top accent, and subtle shadow.

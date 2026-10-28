@@ -81,6 +81,8 @@ flowchart TD
 
 User settings and imported sound data are stored separately under `%LOCALAPPDATA%\EmiliosSoundboard`, so they aren't intended to live inside the source folder.
 
+The code is split into three projects: `EmiliosSoundboard.Core` (library format and storage, plain .NET 8), `EmiliosSoundboard` (the WinForms app) and `EmiliosSoundboard.Tests` (xunit tests for the core). The core builds and its tests run on any OS; the UI is Windows-only.
+
 ## Performance & benchmarking
 
 **No verified benchmark results are available yet.** I don't want to invent FPS, CPU, memory, or startup-time numbers. The graph below is a benchmark checklist—not fabricated measurements. Once measurements are collected on a real Windows machine, replace it with actual values and include the PC specs and test method.

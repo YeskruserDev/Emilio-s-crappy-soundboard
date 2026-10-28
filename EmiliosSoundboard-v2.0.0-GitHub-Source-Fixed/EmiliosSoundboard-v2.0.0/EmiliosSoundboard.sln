@@ -1,9 +1,13 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EmiliosSoundboard", "EmiliosSoundboard\EmiliosSoundboard.csproj", "{3F2A6C1E-8B47-4D59-A1E2-5C7B9D0E4A13}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmiliosSoundboard.Core", "EmiliosSoundboard.Core\EmiliosSoundboard.Core.csproj", "{43FAD3EA-6C8F-4F5A-8D19-C1B1AB777502}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmiliosSoundboard.Tests", "EmiliosSoundboard.Tests\EmiliosSoundboard.Tests.csproj", "{7C1C61E3-141E-4A66-ADDF-22020C33FB6F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{3F2A6C1E-8B47-4D59-A1E2-5C7B9D0E4A13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3F2A6C1E-8B47-4D59-A1E2-5C7B9D0E4A13}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3F2A6C1E-8B47-4D59-A1E2-5C7B9D0E4A13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43FAD3EA-6C8F-4F5A-8D19-C1B1AB777502}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43FAD3EA-6C8F-4F5A-8D19-C1B1AB777502}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43FAD3EA-6C8F-4F5A-8D19-C1B1AB777502}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43FAD3EA-6C8F-4F5A-8D19-C1B1AB777502}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C1C61E3-141E-4A66-ADDF-22020C33FB6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C1C61E3-141E-4A66-ADDF-22020C33FB6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C1C61E3-141E-4A66-ADDF-22020C33FB6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C1C61E3-141E-4A66-ADDF-22020C33FB6F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

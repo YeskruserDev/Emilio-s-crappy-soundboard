@@ -15,9 +15,8 @@ namespace EmiliosSoundboard
     {
         private ComboBox devices, outputs, presets;
         private AccentPitchTrackBar pitch;
-        private TrackBar wet;
         private Label pitchValue, status;
-        private Button start, save, delete;
+        private Button start, delete;
         private WaveInEvent capture;
         private WaveOutEvent output;
         private BufferedWaveProvider buffer;
