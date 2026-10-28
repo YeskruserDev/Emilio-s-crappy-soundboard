@@ -180,6 +180,7 @@ namespace EmiliosSoundboard
                 if (galaxyBackground != null) { galaxyBackground.Dispose(); galaxyBackground = null; }
                 loadedBackgroundPath = requestedBg;
                 try { if (File.Exists(requestedBg)) galaxyBackground = new Bitmap(requestedBg); } catch { galaxyBackground = null; }
+                InvalidateBackdrop();
                 forceFrame = true;
             }
             bool hoverAnim = set.HoverAnimations;
@@ -236,6 +237,7 @@ namespace EmiliosSoundboard
                         if (pressed.Card == c) { pressed = new Hit(); pressing = false; }
                         c.Dispose();
                         cards.RemoveAt(i);
+                        viewReady = false;
                         continue;
                     }
                 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -10,6 +11,10 @@ namespace EmiliosSoundboard
     internal sealed partial class MainForm
     {
         private Font fTitleL, fTitleS, fCount, fAdd, fCardName, fCardSub, fEdit, fStatus, fTime, fToast, fEmptyBig, fEmptySmall;
+        // Fonts that used to be created and disposed on every frame. Same faces, now allocated once.
+        private Font fCoolLabel, fCredit, fLink, fVoiceFx, fStop;
+        private readonly Dictionary<int, Font> titleFonts = new Dictionary<int, Font>();
+        private float cardContentAlpha = 1f;
         private readonly SolidBrush brush = new SolidBrush(Color.White);
         private readonly Pen pen = new Pen(Color.White, 1f);
         private readonly ImageAttributes fadeAttr = new ImageAttributes();
@@ -24,6 +29,27 @@ namespace EmiliosSoundboard
             Alignment = StringAlignment.Center,
             LineAlignment = StringAlignment.Center
         };
+        private readonly StringFormat noWrapCenterFormat = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap
+        };
+        private readonly StringFormat wrapCenterFormat = new StringFormat
+        {
+            Alignment = StringAlignment.Center
+        };
+
+        /// <summary>Title font for a size, cached: the auto-fit loop used to allocate one per frame.</summary>
+        private Font TitleFont(float size)
+        {
+            int key = (int)Math.Round(size * 10f);
+            Font f;
+            if (titleFonts.TryGetValue(key, out f) && f != null) return f;
+            f = Theme.MakeLogicalFont(key / 10f, FontStyle.Bold, "Comic Sans MS");
+            titleFonts[key] = f;
+            return f;
+        }
 
         private void CreateFonts()
         {
@@ -39,17 +65,27 @@ namespace EmiliosSoundboard
             fToast = Theme.MakeLogicalFont(10f, FontStyle.Regular, "Comic Sans MS");
             fEmptyBig = Theme.MakeLogicalFont(15f, FontStyle.Regular, "Comic Sans MS");
             fEmptySmall = Theme.MakeLogicalFont(10f, FontStyle.Regular, "Comic Sans MS");
+            fCoolLabel = Theme.MakeLogicalFont(8f, FontStyle.Bold, "Comic Sans MS");
+            fCredit = Theme.MakeLogicalFont(8.5f, FontStyle.Bold, "Comic Sans MS");
+            fLink = Theme.MakeLogicalFont(7.8f, FontStyle.Underline, "Comic Sans MS");
+            fVoiceFx = Theme.MakeLogicalFont(10f, FontStyle.Bold, "Comic Sans MS");
+            fStop = Theme.MakeLogicalFont(9f, FontStyle.Regular);
         }
 
         private void DisposeFonts()
         {
-            foreach (var f in new[] { fTitleL, fTitleS, fCount, fAdd, fCardName, fCardSub, fEdit, fStatus, fTime, fToast, fEmptyBig, fEmptySmall })
+            foreach (var f in new[] { fTitleL, fTitleS, fCount, fAdd, fCardName, fCardSub, fEdit, fStatus, fTime, fToast, fEmptyBig, fEmptySmall,
+                                      fCoolLabel, fCredit, fLink, fVoiceFx, fStop })
                 if (f != null) f.Dispose();
+            foreach (var f in titleFonts.Values) if (f != null) f.Dispose();
+            titleFonts.Clear();
             brush.Dispose();
             pen.Dispose();
             fadeAttr.Dispose();
             nameFormat.Dispose();
             centerFormat.Dispose();
+            noWrapCenterFormat.Dispose();
+            wrapCenterFormat.Dispose();
         }
 
         private SolidBrush B(Color c)
@@ -79,19 +115,9 @@ namespace EmiliosSoundboard
             var set = store.Data.Settings;
             float k = set.Intensity / 100f * 1.6f;
 
-            // Background
-            var full = new RectangleF(-1, -1, w + 2, h + 2);
-            using (var bg = new LinearGradientBrush(full, Color.FromArgb(1, 2, 5), Color.FromArgb(0, 0, 1), 90f))
-                g.FillRectangle(bg, full);
-
-            if (galaxyBackground != null)
-            {
-                float pan = (float)Math.Sin(hazeTime * 0.018f) * 8f;
-                var dest = new RectangleF(-pan, -4f, w + 2f * pan, h + 8f);
-                g.DrawImage(galaxyBackground, dest);
-                using (var dim = new SolidBrush(Color.FromArgb(64, 0, 0, 5))) g.FillRectangle(dim, full);
-            }
-            field.DrawHaze(g, w, h, hazeTime);
+            // Backdrop (gradient, optional photo, drifting haze) comes from a cached bitmap, so it
+            // costs one 1:1 blit instead of four oversized bilinear blits per frame.
+            DrawBackdrop(g, w, h);
             if (set.CoolMode) DrawRainbowRoad(g, w, h, hazeTime);
             field.Draw(g, bgLevel);
             field.DrawCursorGlow(g, glowX, glowY, glowLevel, k);
@@ -212,9 +238,11 @@ namespace EmiliosSoundboard
                 for (int i = 0; i < count; i++) poly[count + i] = sideRight[count - 1 - i];
                 g.FillPolygon(underside, poly);
                 // Exposed front lip makes the road look raised, not like a line.
-                for (int i = 0; i < count - 1; i++)
+                // One shared brush for all 99 segments: allocating a SolidBrush per segment was
+                // ~100 GDI+ objects every single frame.
+                using (var face = new SolidBrush(Color.FromArgb(225, 66, 57, 88)))
                 {
-                    using (var face = new SolidBrush(Color.FromArgb(225, 66, 57, 88)))
+                    for (int i = 0; i < count - 1; i++)
                     {
                         g.FillPolygon(face, new[] { left[i], left[i + 1], sideLeft[i + 1], sideLeft[i] });
                         g.FillPolygon(face, new[] { right[i], right[i + 1], sideRight[i + 1], sideRight[i] });
@@ -260,9 +288,7 @@ namespace EmiliosSoundboard
                 }
             }
             DrawMarioKartOnRoad(g, w, center, t);
-            using (var f = Theme.MakeLogicalFont(8f, FontStyle.Bold, "Comic Sans MS"))
-            using (var b = new SolidBrush(Color.FromArgb(240, 255, 255, 255)))
-                g.DrawString("COOL MODE • RAINBOW ROAD", f, b, 22f, h - 116f);
+            g.DrawString("COOL MODE • RAINBOW ROAD", fCoolLabel, B(Color.FromArgb(240, 255, 255, 255)), 22f, h - 116f);
         }
 
         private void DrawMarioKartOnRoad(Graphics g, float w, PointF[] roadCenter, float t)
@@ -292,14 +318,10 @@ namespace EmiliosSoundboard
         private void DrawHeader(Graphics g)
         {
             float w = LW;
-            using (var creditFont = Theme.MakeLogicalFont(8.5f, FontStyle.Bold, "Comic Sans MS"))
-            using (var creditBrush = new SolidBrush(Color.FromArgb(230, Theme.CoolWhite)))
-                g.DrawString("Made by Emilio", creditFont, creditBrush, 16f, 12f);
+            g.DrawString("Made by Emilio", fCredit, B(Color.FromArgb(230, Theme.CoolWhite)), 16f, 12f);
             // Paint the GitHub link on the same owner-drawn surface so it persists after every restart
             // and cannot be hidden by transparent child-control painting.
-            using (var linkFont = Theme.MakeLogicalFont(7.8f, FontStyle.Underline, "Comic Sans MS"))
-            using (var linkBrush = new SolidBrush(Theme.Blue))
-                g.DrawString("github.com/emilspaskevics1-max", linkFont, linkBrush, 16f, 29f);
+            g.DrawString("github.com/emilspaskevics1-max", fLink, B(Theme.Blue), 16f, 29f);
 
             // Keep the header visually continuous with the starfield; no hard separator line.
 
@@ -316,8 +338,7 @@ namespace EmiliosSoundboard
             float tw = 0f;
             while (titleSize >= 18f)
             {
-                if (tf != null) tf.Dispose();
-                tf = Theme.MakeLogicalFont(titleSize, FontStyle.Bold, "Comic Sans MS");
+                tf = TitleFont(titleSize);   // cached, never disposed here
                 tw = Theme.MeasureSpaced(g, title, tf, spacing);
                 if (tw <= safeWidth) break;
                 titleSize -= 1.5f;
@@ -333,7 +354,6 @@ namespace EmiliosSoundboard
             }
             using (var gb = new LinearGradientBrush(titleRect, Color.FromArgb(248, 250, 255), Color.FromArgb(172, 192, 255), 0f))
                 Theme.DrawSpaced(g, title, tf, gb, titleRect.X, ty, spacing);
-            if (!ReferenceEquals(tf, fTitleS) && !ReferenceEquals(tf, fTitleL)) tf.Dispose();
 
             // Sound count centered on the whole window, below the title.
             int n = VisibleCount();
@@ -351,12 +371,9 @@ namespace EmiliosSoundboard
             using (var path = Theme.RoundedRect(r, 12f))
             using (var fill = new LinearGradientBrush(r, Theme.AccentSoft, Theme.PanelFill, 90f))
             using (var edge = new Pen(Theme.WithAlpha(Theme.Blue, 210), 1.4f))
-            using (var font = Theme.MakeLogicalFont(10f, FontStyle.Bold, "Comic Sans MS"))
-            using (var text = new SolidBrush(Theme.CoolWhite))
-            using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
             {
                 g.FillPath(fill, path); g.DrawPath(edge, path);
-                g.DrawString("VOICE FX", font, text, r, sf);
+                g.DrawString("VOICE FX", fVoiceFx, B(Theme.CoolWhite), r, centerFormat);
             }
         }
 
@@ -527,7 +544,8 @@ namespace EmiliosSoundboard
         private void DrawCardContent(Graphics g, Card c, float alpha, float pulse)
         {
             float w = c.W, h = CardH;
-            Func<int, int> A = a => (int)(a * alpha);
+            // Was a Func<int,int> closure allocated for every card on every frame.
+            cardContentAlpha = alpha;
 
             // Playback line along the bottom while this sound is playing
             if (c.Active > 0.02f)
@@ -616,6 +634,12 @@ namespace EmiliosSoundboard
             }
         }
 
+        /// <summary>Alpha helper for card content. Backed by a field so no closure is allocated.</summary>
+        private int A(int value)
+        {
+            return (int)(value * cardContentAlpha);
+        }
+
         private void DrawEmptyState(Graphics g)
         {
             RectangleF r = EmptyRect();
@@ -654,7 +678,7 @@ namespace EmiliosSoundboard
             g.DrawString(searching ? "No matching sounds" : "No sounds yet", fEmptyBig, B(Theme.CoolWhite), t1, centerFormat);
             var t2 = new RectangleF(r.X + 20f, r.Y + 134f, r.Width - 40f, 50f);
             g.DrawString(searching ? "Try a different search term or choose ALL." : "Click here or press + ADD SOUND to import your first audio file.\nYou can pick several at once.",
-                fEmptySmall, B(Theme.Muted), t2, new StringFormat { Alignment = StringAlignment.Center });
+                fEmptySmall, B(Theme.Muted), t2, wrapCenterFormat);
         }
 
         private void DrawScrollBar(Graphics g)
@@ -688,11 +712,8 @@ namespace EmiliosSoundboard
             using (var path = Theme.RoundedRect(stop, 8f))
             using (var brush = new SolidBrush(stopHover ? Color.FromArgb(95, 160, 70, 85) : Color.FromArgb(45, 90, 105, 135)))
                 g.FillPath(brush, path);
-            using (var pen = new Pen(Color.FromArgb(150, 210, 220, 245), 1f))
-            using (var path = Theme.RoundedRect(stop, 8f)) g.DrawPath(pen, path);
-            using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap })
-            using (var stopFont = new Font("Comic Sans MS", 9f, FontStyle.Regular))
-                g.DrawString("■  STOP SOUND", stopFont, B(Theme.CoolWhite), stop, sf);
+            using (var path = Theme.RoundedRect(stop, 8f)) g.DrawPath(P(Color.FromArgb(150, 210, 220, 245), 1f), path);
+            g.DrawString("■  STOP SOUND", fStop, B(Theme.CoolWhite), stop, noWrapCenterFormat);
 
             var track = new RectangleF(r.X + 2f, r.Y + 8f, r.Width - 4f, 30f);
             using (var outer = Theme.RoundedRect(track, 15f))

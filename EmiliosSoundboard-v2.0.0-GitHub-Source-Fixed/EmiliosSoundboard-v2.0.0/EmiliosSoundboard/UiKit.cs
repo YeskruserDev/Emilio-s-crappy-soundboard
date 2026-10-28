@@ -348,9 +348,20 @@ namespace EmiliosSoundboard
     {
         protected readonly float ScaleFactor;
 
+        /// <summary>Window material for this dialog. Set before the handle is created.</summary>
+        public BackdropKind BackdropEffect { get; set; } = BackdropKind.Off;
+
         protected int S(int pixels)
         {
             return (int)Math.Round(pixels * ScaleFactor);
+        }
+
+        /// <summary>Re-applies the current material, e.g. after the user changes the setting.</summary>
+        protected void RefreshWindowEffect()
+        {
+            if (!IsHandleCreated) return;
+            WindowEffects.Apply(this, BackdropEffect);
+            WindowEffects.RefreshFrame(this);
         }
 
         public ThemedForm()
@@ -372,6 +383,7 @@ namespace EmiliosSoundboard
         {
             base.OnHandleCreated(e);
             Theme.ApplyDarkTitleBar(this);
+            WindowEffects.Apply(this, BackdropEffect);
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)

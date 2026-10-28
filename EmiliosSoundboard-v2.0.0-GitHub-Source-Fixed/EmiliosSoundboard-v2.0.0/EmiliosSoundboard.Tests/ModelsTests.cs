@@ -35,6 +35,7 @@ namespace EmiliosSoundboard.Tests
             Assert.Equal(100, s.DesktopPetSize);
             Assert.Equal(60, s.Intensity);
             Assert.Equal("Blue", s.AccentColor);
+            Assert.Equal("Mica", s.WindowEffect);
             Assert.Equal(70, s.SoundVolume);
             Assert.Equal(55, s.MusicVolume);
         }
@@ -54,6 +55,7 @@ namespace EmiliosSoundboard.Tests
                 DesktopPetSize = 180,
                 Intensity = 5,
                 AccentColor = "Violet",
+                WindowEffect = "Off",
                 StartupVideoPath = "v.mp4",
                 StartupPhotoPath = "p.png",
                 StartupSoundPath = "s.mp3",
@@ -70,6 +72,7 @@ namespace EmiliosSoundboard.Tests
             Assert.Equal(100, s.DesktopPetSize);
             Assert.Equal(60, s.Intensity);
             Assert.Equal("Blue", s.AccentColor);
+            Assert.Equal("Mica", s.WindowEffect);
             Assert.False(s.CoolMode);
             Assert.False(s.DesktopPetEnabled);
             Assert.Equal("", s.DesktopPetImagePath);
@@ -116,6 +119,43 @@ namespace EmiliosSoundboard.Tests
             Assert.Contains("<AudioFile>abc.wav</AudioFile>", xml);
             Assert.Contains("<ImageFile>bg.png</ImageFile>", xml);
             Assert.DoesNotContain("AudioMissing", xml);   // [XmlIgnore] runtime-only flag
+        }
+
+        [Fact]
+        public void SettingsXml_RoundTripsWindowEffect()
+        {
+            var data = new LibraryData();
+            data.Settings.WindowEffect = "Acrylic";
+
+            var serializer = new XmlSerializer(typeof(LibraryData));
+            string xml;
+            using (var writer = new StringWriter())
+            {
+                serializer.Serialize(writer, data);
+                xml = writer.ToString();
+            }
+
+            Assert.Contains("<WindowEffect>Acrylic</WindowEffect>", xml);
+
+            LibraryData back;
+            using (var reader = new StringReader(xml))
+                back = (LibraryData)serializer.Deserialize(reader);
+            Assert.Equal("Acrylic", back.Settings.WindowEffect);
+        }
+
+        [Fact]
+        public void SettingsXml_FromAnOlderVersion_KeepsTheNewDefault()
+        {
+            // A library.xml written before the window-effect setting existed.
+            const string xml = "<LibraryData><Settings><AccentColor>Violet</AccentColor></Settings><Sounds /></LibraryData>";
+
+            var serializer = new XmlSerializer(typeof(LibraryData));
+            LibraryData data;
+            using (var reader = new StringReader(xml))
+                data = (LibraryData)serializer.Deserialize(reader);
+
+            Assert.Equal("Violet", data.Settings.AccentColor);
+            Assert.Equal("Mica", data.Settings.WindowEffect);
         }
 
         [Fact]

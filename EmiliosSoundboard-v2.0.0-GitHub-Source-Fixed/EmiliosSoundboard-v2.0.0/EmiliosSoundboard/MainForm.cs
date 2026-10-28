@@ -50,6 +50,11 @@ namespace EmiliosSoundboard
         private bool sidebarOpen = true;
         private readonly SpaceField field = new SpaceField();
         private readonly List<Card> cards = new List<Card>();
+        // Visible + sorted card list, rebuilt once per frame instead of on every paint and tick.
+        private readonly List<Card> view = new List<Card>();
+        private bool viewReady;
+        // Cached audio durations so the LENGTH sort never opens a file per comparison.
+        private readonly Dictionary<string, long> durationCache = new Dictionary<string, long>();
         private readonly Timer timer = new Timer();
         private readonly Stopwatch clock = Stopwatch.StartNew();
         private readonly float scale;
@@ -233,7 +238,7 @@ namespace EmiliosSoundboard
             Theme.PanelFill = Color.FromArgb(11, Math.Max(12, accent.G / 9), Math.Max(20, accent.B / 4));
             Theme.AccentSoft = Color.FromArgb(30, accent.R / 3, accent.G / 3, accent.B / 3);
             foreach (Form form in Application.OpenForms)
-                if (form is MainForm main) main.RefreshSearchTheme();
+                if (form is MainForm main) { main.InvalidateBackdrop(); main.RefreshSearchTheme(); }
         }
 
         private void RefreshSearchTheme()
@@ -319,6 +324,7 @@ namespace EmiliosSoundboard
                 foreach (var c in cards) c.Dispose();
                 cards.Clear();
                 DisposeFonts();
+                InvalidateBackdrop();
                 if (appIcon != null) appIcon.Dispose();
                 if (galaxyBackground != null) galaxyBackground.Dispose();
             }

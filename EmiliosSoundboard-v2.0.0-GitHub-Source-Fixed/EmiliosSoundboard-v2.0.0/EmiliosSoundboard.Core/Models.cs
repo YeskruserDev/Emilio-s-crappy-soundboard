@@ -37,6 +37,10 @@ namespace EmiliosSoundboard
         public int Intensity = 60;
 
         public string AccentColor = "Blue";
+
+        /// <summary>Window material for dialogs: "Mica", "Acrylic" or "Off". Windows 11 only.</summary>
+        public string WindowEffect = "Mica";
+
         public string StartupVideoPath = "";
         public string StartupPhotoPath = "";
         public string StartupSoundPath = "";
@@ -57,6 +61,7 @@ namespace EmiliosSoundboard
             DesktopPetSize = 100;
             Intensity = 60;
             AccentColor = "Blue";
+            WindowEffect = "Mica";
             StartupVideoPath = "";
             StartupPhotoPath = "";
             StartupSoundPath = "";
