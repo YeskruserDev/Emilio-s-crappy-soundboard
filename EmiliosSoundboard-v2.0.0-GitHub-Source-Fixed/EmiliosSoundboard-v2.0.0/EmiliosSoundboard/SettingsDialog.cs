@@ -25,6 +25,7 @@ namespace EmiliosSoundboard
         {
             this.store = store;
             settings = store.Data.Settings;
+            BackdropEffect = WindowEffects.Parse(settings.WindowEffect);
 
             Text = "Settings";
             FormBorderStyle = FormBorderStyle.Sizable;
@@ -162,6 +163,30 @@ namespace EmiliosSoundboard
             contentPanel.Controls.Add(accentPicker);
             var accentLabel = MakeLabel("Changes highlights, borders, glow and progress accents", 9f, FontStyle.Regular, Theme.Muted);
             accentLabel.SetBounds(left + S(194), y + S(5), width - S(194), S(22)); contentPanel.Controls.Add(accentLabel); y += S(40);
+
+            // Window material. Mica and Acrylic are DWM compositor effects, so they show on the
+            // window frame and title bar; the painted content area stays opaque.
+            var effectLabel = MakeLabel("WINDOW EFFECT", 8.5f, FontStyle.Bold, Theme.CoolWhite);
+            effectLabel.SetBounds(left, y, width, S(20)); contentPanel.Controls.Add(effectLabel); y += S(22);
+            var effectPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(14, 18, 31), ForeColor = Theme.CoolWhite };
+            effectPicker.Items.AddRange(new object[] { "Mica", "Acrylic", "Off" });
+            effectPicker.SelectedItem = WindowEffects.Describe(WindowEffects.Parse(settings.WindowEffect));
+            effectPicker.SetBounds(left, y, S(180), S(30));
+            effectPicker.SelectedIndexChanged += (s, e) =>
+            {
+                settings.WindowEffect = Convert.ToString(effectPicker.SelectedItem);
+                BackdropEffect = WindowEffects.Parse(settings.WindowEffect);
+                RefreshWindowEffect();
+            };
+            contentPanel.Controls.Add(effectPicker);
+            var effectHint = MakeLabel(
+                WindowEffects.Supported
+                    ? "Windows 11 material for the window frame and title bar"
+                    : "Needs Windows 11 22H2 or newer; ignored on this PC",
+                9f, FontStyle.Regular, Theme.Muted);
+            effectHint.SetBounds(left + S(194), y + S(5), width - S(194), S(34)); contentPanel.Controls.Add(effectHint);
+            y += S(44);
+
             var bgLabel = MakeLabel("CUSTOM BACKGROUND IMAGE (OPTIONAL)", 8.5f, FontStyle.Bold, Theme.CoolWhite);
             bgLabel.SetBounds(left, y, width, S(20)); contentPanel.Controls.Add(bgLabel); y += S(22);
             backgroundPath = new TextBox { Text = settings.BackgroundImagePath ?? "", BackColor = Color.FromArgb(14,18,31), ForeColor = Theme.CoolWhite, BorderStyle = BorderStyle.FixedSingle };

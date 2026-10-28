@@ -2,6 +2,26 @@
 
 This is the single, cumulative patch-notes file. New changes should be appended here; do not create separate release-note files for future updates.
 
+## Fullscreen performance pass and window material (2026-10-28)
+- The backdrop no longer re-renders its haze every frame. The drifting haze was four oversized, bilinear-filtered, alpha-blended blits, roughly 22 megapixels per frame at 1080p. It is now rendered into a cached bitmap about eight times a second and blitted 1:1 in between. While a window is being resized, painting goes straight to the screen instead of allocating a fullscreen bitmap per frame. If the cache cannot be allocated, painting falls back to the old path.
+- The visible card list is built once per frame instead of through three LINQ queries plus a sort for every tick and every paint. Offscreen cards were already skipped when drawing.
+- The LENGTH sort no longer opens an audio file per comparison. Durations are cached per file.
+- Star tint is cached per accent colour. `ControlPaint.Light` used to run for every star, every frame.
+- Removed per-frame GDI+ allocations: the Rainbow Road loop was creating one `SolidBrush` per road segment (about 99 per frame), and the header, footer, Voice FX button, cool-mode label and title auto-fit were each building and disposing fonts every frame.
+- Added a `WINDOW EFFECT` setting in the settings window: `Mica`, `Acrylic` or `Off`. It applies the Windows 11 DWM system backdrop plus rounded corners to the settings window. The material is drawn by the compositor, so it shows on the window frame and title bar; the painted content area stays opaque because WinForms GDI+ cannot composite over it. On Windows 10 and older Windows 11 builds the call is ignored and the dialog looks exactly as before.
+- The stored value is `WindowEffect` in `library.xml`. Older files without it load with `Mica`.
+- Still unverified: nobody has run this on Windows yet. The frame-rate improvement and the Mica appearance are not measured; both need a real window on Windows 11 22H2 or newer.
+
+## Structure cleanup, warning-free build, first test suite (2026-10-28)
+- Split the 1361-line `MainForm.cs` into partial files by job: `MainForm.cs` (state, startup, lifecycle), `MainForm.Library.cs` (cards, search, sorting, import, edit, delete), `MainForm.Animation.cs` (the 60 Hz loop, space field, desktop pet), `MainForm.Input.cs` (hit testing, mouse and keyboard), `MainForm.Playback.cs` (playback, progress, toasts, settings). No drawing or event code was rewritten; member bodies moved verbatim.
+- Added `EmiliosSoundboard.Core`, a platform-neutral .NET 8 project holding the library format and storage. Image decoding stays in the app behind the new `IImageImporter` seam, so the storage layer no longer depends on System.Drawing.
+- `DataStore` can now be pointed at an explicit folder (`new DataStore(root)`), which is what makes the storage tests possible.
+- Fixed all 6 compiler warnings: renamed `ThemedForm.Scale` to `ScaleFactor` (it hid `Control.Scale`), used the existing `margin` constant in `LayoutCards` instead of a duplicated literal, removed the unused `left` local, removed the unused `wet` and `save` fields in Voice FX, moved DPI awareness from `app.manifest` into `ApplicationHighDpiMode` (SystemAware, same behaviour as before).
+- Deleted dead code with no callers: `MainForm.LiveCount`, `MainForm.ContentWidth`, `Theme.MakeLightFont`, `Theme.Lerp`, `Theme.FormatTime`, `ImageUtil.MakeCover`.
+- Added `EmiliosSoundboard.Tests` (xunit, 32 tests) covering the library round-trip, corrupt-file recovery, sanitising, unique names, import, delete safety and byte formatting. The tests run on Linux and Windows.
+- Added a GitHub Actions workflow: tests on Ubuntu, warning-free build of the whole solution plus tests on Windows.
+- The WinForms UI still has not been run on Windows. Layout, Voice FX with real devices and Discord presence remain runtime-unverified.
+
 ## Latest update — Search UI refresh
 - Removed the liquid-glass appearance from the search panel.
 - Replaced it with a clean, opaque midnight-navy panel, restrained cyan top accent, and subtle shadow.

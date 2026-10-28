@@ -10,6 +10,7 @@ A customizable Windows soundboard built with C#, Windows Forms, .NET 8, and NAud
 - Desktop pet with custom image, adjustable size, wandering, pauses, looking around, jumps, and spins
 - Live microphone pitch effects (device-dependent; test on your setup)
 - Discord Rich Presence integration
+- Optional Mica / Acrylic window material on the settings window (Windows 11 22H2+)
 - User settings and imported sound library stored separately from the app under `%LOCALAPPDATA%\EmiliosSoundboard`
 
 ## Requirements
@@ -43,6 +44,27 @@ The current source package includes `MarioKart.png` and `RainbowRoad.mp3`. Only 
 
 All historical and future patch notes are maintained in the single [`RELEASE-NOTES.md`](RELEASE-NOTES.md) file. Add new entries there rather than creating separate patch-note files.
 
+## Project layout
+
+```
+EmiliosSoundboard.Core/    library format + storage (plain .NET 8, no UI, no System.Drawing)
+EmiliosSoundboard/         WinForms app: painting, audio, dialogs, image pipeline
+EmiliosSoundboard.Tests/   xunit tests for the core
+```
+
+## Build and test
+
+```bat
+dotnet build EmiliosSoundboard.sln -c Release
+dotnet test EmiliosSoundboard.Tests/EmiliosSoundboard.Tests.csproj -c Release
+```
+
+The solution builds on Linux and macOS as well. The app project sets `EnableWindowsTargeting`, so it cross-compiles anywhere, but the UI itself only runs on Windows. The core and its 50 tests are platform neutral and run on any OS.
+
+CI (`.github/workflows/build.yml`) runs the tests on Ubuntu and does a warning-free build of the whole solution plus the tests on Windows.
+
 ## Build status
 
-This package has not been compiled or runtime-tested in this packaging environment. Build and test on Windows before publishing a release. If a build fails, share the complete terminal output.
+- Builds clean: 0 warnings, 0 errors with the .NET 8 SDK.
+- Core tests: 50 passing.
+- The WinForms UI has not been run on Windows yet. Window layout, Voice FX with real audio devices and Discord presence still need runtime testing on a Windows machine.
