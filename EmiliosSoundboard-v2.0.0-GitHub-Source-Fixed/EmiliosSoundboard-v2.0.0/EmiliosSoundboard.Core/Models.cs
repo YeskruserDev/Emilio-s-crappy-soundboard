@@ -16,6 +16,12 @@ namespace EmiliosSoundboard
         /// <summary>File name (no folder) of the custom background inside the Backgrounds folder, or empty for default.</summary>
         public string ImageFile = "";
 
+        /// <summary>
+        /// Device name this sound plays through, or empty to follow the board's setting.
+        /// Names are stored, not indexes, because Windows renumbers devices when hardware changes.
+        /// </summary>
+        public string OutputDevice = "";
+
         /// <summary>Not saved. True when the audio file could not be found on disk at startup.</summary>
         [XmlIgnore]
         public bool AudioMissing;
@@ -28,6 +34,10 @@ namespace EmiliosSoundboard
         public bool StarReaction = true;
         public bool HoverAnimations = true;
         public bool CoolMode = false;
+
+        /// <summary>Enables bold outlines, halftone dots and pop-art colours throughout the UI.</summary>
+        public bool ComicStyleMode = false;
+
         public bool DesktopPetEnabled = false;
         public string DesktopPetImagePath = "";
         /// <summary>Desktop pet display size as a percentage (40-180).</summary>
@@ -37,6 +47,9 @@ namespace EmiliosSoundboard
         public int Intensity = 60;
 
         public string AccentColor = "Blue";
+
+        /// <summary>Unlocked (resizable) or a supported fixed client-window resolution.</summary>
+        public string WindowResolution = "Unlocked";
 
         /// <summary>Window material for dialogs: "Mica", "Acrylic" or "Off". Windows 11 only.</summary>
         public string WindowEffect = "Mica";
@@ -49,6 +62,21 @@ namespace EmiliosSoundboard
         public int SoundVolume = 70;
         public int MusicVolume = 55;
 
+        /// <summary>
+        /// Output device for sounds, by name. Empty or "System default" follows the Windows default,
+        /// which is what makes routing to a virtual cable (Discord, OBS) possible.
+        /// </summary>
+        public string OutputDevice = "";
+
+        /// <summary>
+        /// Shared Windows render endpoint for processed Voice FX, by endpoint ID; blank means the
+        /// default output. The soundboard keeps its own name-based routing above.
+        /// </summary>
+        public string SoundOutputDeviceId = "";
+
+        /// <summary>When true the log records Debug/Trace detail. Useful for bug reports.</summary>
+        public bool VerboseLogging = false;
+
         public void ResetToDefaults()
         {
             AnimatedBackground = true;
@@ -56,11 +84,13 @@ namespace EmiliosSoundboard
             StarReaction = true;
             HoverAnimations = true;
             CoolMode = false;
+            ComicStyleMode = false;
             DesktopPetEnabled = false;
             DesktopPetImagePath = "";
             DesktopPetSize = 100;
             Intensity = 60;
             AccentColor = "Blue";
+            WindowResolution = "Unlocked";
             WindowEffect = "Mica";
             StartupVideoPath = "";
             StartupPhotoPath = "";
@@ -69,6 +99,9 @@ namespace EmiliosSoundboard
             Volume = 70;
             SoundVolume = 70;
             MusicVolume = 55;
+            OutputDevice = "";
+            SoundOutputDeviceId = "";
+            VerboseLogging = false;
         }
     }
 

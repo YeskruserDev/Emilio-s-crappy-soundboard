@@ -26,46 +26,47 @@ namespace EmiliosSoundboard
 
         private void CreateSearchUi()
         {
-            searchTitle = new Label { Text = "SEARCH LIBRARY", ForeColor = Color.FromArgb(132, 220, 255), BackColor = Color.Transparent, Font = new Font("Segoe UI", 9f, FontStyle.Bold), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft };
+            searchTitle = new Label { Text = "SOUND LIBRARY", ForeColor = Color.FromArgb(132, 220, 255), BackColor = Color.Transparent, Font = new Font("Segoe UI", 9.5f, FontStyle.Bold), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft };
             Controls.Add(searchTitle);
             searchBox = new TextBox
             {
                 Font = new Font("Segoe UI", 10f, FontStyle.Regular),
                 BackColor = Color.FromArgb(10, 17, 31),
                 ForeColor = Color.FromArgb(240, 246, 255),
-                BorderStyle = BorderStyle.FixedSingle,
-                PlaceholderText = "Search by name or file type..."
+                BorderStyle = BorderStyle.None,
+                PlaceholderText = "Find a sound or file type...",
+                Dock = DockStyle.Fill
             };
             searchBox.TextChanged += (s, e) => { scrollTarget = 0; LayoutCards(); forceFrame = true; Invalidate(); };
-            Controls.Add(searchBox);
+            searchBoxFrame = new AccentSearchFrame { Accent = Theme.Blue, BackColor = Color.Transparent, Padding = new Padding((int)(11 * scale), (int)(4 * scale), (int)(8 * scale), (int)(4 * scale)) };
+            searchBoxFrame.Controls.Add(searchBox);
+            Controls.Add(searchBoxFrame);
 
             searchTags = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
-                BackColor = Color.FromArgb(18, 27, 46),
-                Padding = new Padding((int)(5 * scale)),
+                BackColor = Color.Transparent,
+                Padding = new Padding((int)(4 * scale)),
                 Margin = Padding.Empty,
                 AutoScroll = false
             };
             string[] tags = { "ALL", "NAME A-Z", "LENGTH", "TYPE" };
-            int sortButtonWidth = (int)(82f * scale);
+            int sortButtonWidth = (int)(88f * scale);
             foreach (string tag in tags)
             {
-                var b = new Button { Text = tag, Tag = tag, AutoSize = false, Size = new Size(sortButtonWidth, (int)(28 * scale)), UseVisualStyleBackColor = false };
-                b.FlatStyle = FlatStyle.Flat;
-                b.FlatAppearance.BorderSize = 0;
-                b.FlatAppearance.MouseOverBackColor = Color.FromArgb(37, 57, 82);
-                b.FlatAppearance.MouseDownBackColor = Color.FromArgb(38, 116, 165);
-                b.BackColor = String.Equals(tag, sortMode, StringComparison.OrdinalIgnoreCase) ? Color.FromArgb(25, 119, 168) : Color.FromArgb(30, 42, 61);
-                b.ForeColor = String.Equals(tag, sortMode, StringComparison.OrdinalIgnoreCase) ? Color.White : Color.FromArgb(196, 212, 232);
-                b.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
-                b.Margin = new Padding((int)(3 * scale));
-                using (var shape = Theme.RoundedRect(new RectangleF(0, 0, b.Width, b.Height), 5f * scale)) b.Region = new Region(shape);
-                b.Click += (s, e) => { sortMode = Convert.ToString(((Button)s).Tag); RefreshSearchTheme(); LayoutCards(); Invalidate(); };
-                b.MouseEnter += (s, e) => { ((Button)s).BackColor = Color.FromArgb(58, 55, 75, 110); };
-                b.MouseLeave += (s, e) => RefreshSearchTheme();
-                searchTags.Controls.Add(b);
+                var chip = new SearchSortChip
+                {
+                    Text = tag,
+                    Tag = tag,
+                    Size = new Size(sortButtonWidth, (int)(30 * scale)),
+                    Margin = new Padding((int)(3 * scale)),
+                    Accent = Theme.Blue,
+                    Selected = String.Equals(tag, sortMode, StringComparison.OrdinalIgnoreCase),
+                    Font = new Font("Segoe UI", 8.2f, FontStyle.Bold)
+                };
+                chip.Click += (s, e) => { sortMode = Convert.ToString(((Control)s).Tag); RefreshSearchTheme(); LayoutCards(); Invalidate(); };
+                searchTags.Controls.Add(chip);
             }
             Controls.Add(searchTags);
             Resize += (s, e) => PositionSearchUi();
@@ -76,24 +77,24 @@ namespace EmiliosSoundboard
         private void PositionSearchUi()
         {
             if (searchBox == null || searchTags == null || IsDisposed) return;
-            int width = (int)(LW >= 850f ? 190f * scale : 176f * scale);
+            int width = (int)(LW >= 850f ? 204f * scale : 176f * scale);
             int x = (int)(36f * scale);
             int logicalY = (int)Math.Max(132f, Math.Min(LH * 0.34f, LH - 220f));
             int y = (int)(logicalY * scale);
             bool showSidebar = LW >= 850f && sidebarOpen;
             searchTitle.Visible = showSidebar;
-            searchBox.Visible = showSidebar;
+            searchBoxFrame.Visible = showSidebar;
             searchTags.Visible = showSidebar;
             searchTitle.SetBounds(x, y - (int)(24f * scale), width, (int)(22f * scale));
-            searchBox.SetBounds(x, y, width, (int)(34f * scale));
-            searchTags.SetBounds(x - (int)(2f * scale), y + (int)(40f * scale), width + (int)(4f * scale), (int)(76f * scale));
-            searchGlassRect = new RectangleF(20f, logicalY - 42f, width / scale + 24f, 158f);
+            searchBoxFrame.SetBounds(x, y, width, (int)(38f * scale));
+            searchTags.SetBounds(x - (int)(2f * scale), y + (int)(44f * scale), width + (int)(4f * scale), (int)(78f * scale));
+            searchGlassRect = new RectangleF(20f, logicalY - 42f, width / scale + 24f, 166f);
             if (sidebarArrow != null)
             {
                 sidebarArrow.SetBounds(0, y + (int)(40f * scale), (int)(28f * scale), (int)(44f * scale));
                 sidebarArrow.BringToFront();
             }
-            searchTitle.BringToFront(); searchBox.BringToFront(); searchTags.BringToFront();
+            searchTitle.BringToFront(); searchBoxFrame.BringToFront(); searchTags.BringToFront();
             if (sidebarArrow != null) sidebarArrow.BringToFront();
             Invalidate();
         }
@@ -272,7 +273,7 @@ namespace EmiliosSoundboard
                         : shortName;
                     string defaultName = store.UniqueName(CleanName(Path.GetFileNameWithoutExtension(file)), null);
 
-                    string name, imageSource;
+                    string name, imageSource, device;
                     using (var dlg = new SoundDetailsDialog(store, "NAME YOUR SOUND", sub, defaultName, null,
                                                             files.Length > 1, "ADD SOUND", null))
                     {
@@ -281,6 +282,7 @@ namespace EmiliosSoundboard
                         if (r == DialogResult.Ignore) continue;
                         name = store.UniqueName(dlg.SoundName, null);
                         imageSource = dlg.ChosenImagePath;
+                        device = dlg.OutputDevice;
                     }
 
                     ImportResult res;
@@ -291,14 +293,25 @@ namespace EmiliosSoundboard
                     catch (Exception ex)
                     {
                         problems.Add(shortName + "\n    Could not copy the file: " + ex.Message);
+                        Log.Warn("import", "could not copy \"" + file + "\"", ex);
                         continue;
                     }
 
+                    res.Item.OutputDevice = device;
                     store.Data.Sounds.Add(res.Item);
                     AddCardFor(res.Item, 0);
                     added++;
                     lastName = res.Item.Name;
-                    if (res.Warning != null) problems.Add(shortName + "\n    " + res.Warning);
+                    if (res.Warning != null)
+                    {
+                        problems.Add(shortName + "\n    " + res.Warning);
+                        Log.Warn("import", shortName + ": " + res.Warning);
+                    }
+                    else
+                    {
+                        Log.Info("import", "added \"" + res.Item.Name + "\" from " + shortName +
+                                           (string.IsNullOrEmpty(device) ? "" : " (device: " + device + ")"));
+                    }
                 }
 
                 if (added > 0)
@@ -355,12 +368,13 @@ namespace EmiliosSoundboard
             try
             {
                 using (var dlg = new SoundDetailsDialog(store, "EDIT SOUND",
-                    "Change the name or the background of this button.", item.Name,
-                    store.ImagePath(item), false, "SAVE", item))
+                    "Change the name, the background or the playback device of this button.", item.Name,
+                    store.ImagePath(item), false, "SAVE", item, item.OutputDevice))
                 {
                     if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
                     item.Name = store.UniqueName(dlg.SoundName, item);
+                    item.OutputDevice = dlg.OutputDevice;
                     if (dlg.ChosenImagePath != null) await ApplyImage(c, dlg.ChosenImagePath);
                     else if (dlg.RevertImage) DropImage(c);
 
@@ -447,6 +461,7 @@ namespace EmiliosSoundboard
             if (player.CurrentId == c.Item.Id)
             {
                 player.Stop();
+                localMonitorPlayer.Stop();
                 state = PlayState.Ready;
                 lastPos = TimeSpan.Zero;
                 lastDur = TimeSpan.Zero;

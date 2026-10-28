@@ -16,8 +16,9 @@ namespace EmiliosSoundboard
     /// <summary>A custom-painted button with a smooth hover glow. Used in the dialogs.</summary>
     internal sealed class GlowButton : Control
     {
-        private readonly Timer timer = new Timer { Interval = 16 };
+        private readonly Timer timer = new Timer { Interval = 30 };
         private float hover;
+        private float pressAmount;
         private bool hovering;
         private bool pressed;
         private GlowStyle style = GlowStyle.Primary;
@@ -40,10 +41,13 @@ namespace EmiliosSoundboard
             timer.Tick += (s, e) =>
             {
                 float target = hovering ? 1f : 0f;
+                float pressTarget = pressed ? 1f : 0f;
                 hover += (target - hover) * 0.28f;
-                if (Math.Abs(target - hover) < 0.01f)
+                pressAmount += (pressTarget - pressAmount) * 0.36f;
+                if (Math.Abs(target - hover) < 0.01f && Math.Abs(pressTarget - pressAmount) < 0.01f)
                 {
                     hover = target;
+                    pressAmount = pressTarget;
                     timer.Stop();
                 }
                 Invalidate();
@@ -52,8 +56,8 @@ namespace EmiliosSoundboard
 
         protected override void OnMouseEnter(EventArgs e) { hovering = true; timer.Start(); base.OnMouseEnter(e); }
         protected override void OnMouseLeave(EventArgs e) { hovering = false; pressed = false; timer.Start(); base.OnMouseLeave(e); }
-        protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { pressed = true; Focus(); Invalidate(); } base.OnMouseDown(e); }
-        protected override void OnMouseUp(MouseEventArgs e) { pressed = false; Invalidate(); base.OnMouseUp(e); }
+        protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { pressed = true; Focus(); timer.Start(); Invalidate(); } base.OnMouseDown(e); }
+        protected override void OnMouseUp(MouseEventArgs e) { pressed = false; timer.Start(); Invalidate(); base.OnMouseUp(e); }
         protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
         protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
 
@@ -77,20 +81,44 @@ namespace EmiliosSoundboard
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            var saved = g.Save();
+            float pressScale = 1f + hover * 0.012f - pressAmount * 0.035f;
+            g.TranslateTransform(Width / 2f, Height / 2f);
+            g.ScaleTransform(pressScale, pressScale);
+            g.TranslateTransform(-Width / 2f, -Height / 2f);
 
             var r = new RectangleF(5, 5, Width - 10, Height - 10);
             if (pressed) r = Theme.Inflate(r, -1.5f);
-            float radius = Math.Min(14f, r.Height / 2f);
+            float radius = Theme.ComicStyleMode ? Math.Min(7f, r.Height / 4f) : Math.Min(14f, r.Height / 2f);
 
             Color c1, c2, glow;
-            switch (style)
+            if (Theme.ComicStyleMode)
             {
-                case GlowStyle.Danger:
-                    c1 = Color.FromArgb(236, 72, 86); c2 = Color.FromArgb(190, 36, 60); glow = Theme.Danger; break;
-                case GlowStyle.Secondary:
-                    c1 = Color.FromArgb(26, 34, 70); c2 = Color.FromArgb(20, 26, 56); glow = Theme.Blue; break;
-                default:
-                    c1 = Theme.Blue; c2 = Theme.Violet; glow = Theme.Blue; break;
+                switch (style)
+                {
+                    case GlowStyle.Danger:
+                        c1 = Color.FromArgb(225, 225, 225); c2 = Color.FromArgb(175, 175, 175); glow = Color.Black; break;
+                    case GlowStyle.Secondary:
+                        c1 = Color.White; c2 = Color.FromArgb(218, 218, 218); glow = Color.Black; break;
+                    default:
+                        c1 = Color.FromArgb(235, 235, 235); c2 = Color.FromArgb(155, 155, 155); glow = Color.Black; break;
+                }
+                var shadowRect = r; shadowRect.Offset(2f, 3f);
+                using (var shadowPath = Theme.RoundedRect(shadowRect, radius))
+                using (var shadowBrush = new SolidBrush(Color.FromArgb(230, 0, 0, 0)))
+                    g.FillPath(shadowBrush, shadowPath);
+            }
+            else
+            {
+                switch (style)
+                {
+                    case GlowStyle.Danger:
+                        c1 = Color.FromArgb(236, 72, 86); c2 = Color.FromArgb(190, 36, 60); glow = Theme.Danger; break;
+                    case GlowStyle.Secondary:
+                        c1 = Color.FromArgb(26, 34, 70); c2 = Color.FromArgb(20, 26, 56); glow = Theme.Blue; break;
+                    default:
+                        c1 = Theme.Blue; c2 = Theme.Violet; glow = Theme.Blue; break;
+                }
             }
 
             if (hover > 0.02f)
@@ -110,7 +138,13 @@ namespace EmiliosSoundboard
                 using (var fill = new LinearGradientBrush(r, a, b, 0f))
                     g.FillPath(fill, path);
 
-                if (style == GlowStyle.Secondary)
+                if (Theme.ComicStyleMode)
+                {
+                    using (var comicInk = new Pen(Color.FromArgb(245, 0, 0, 0), 2.5f)) g.DrawPath(comicInk, path);
+                    using (var highlight = new Pen(Color.FromArgb(180, 255, 255, 255), 1f))
+                        g.DrawLine(highlight, r.X + radius, r.Y + 3f, r.Right - radius, r.Y + 3f);
+                }
+                else if (style == GlowStyle.Secondary)
                 {
                     using (var pen = new Pen(Theme.Mix(Color.FromArgb(70, 84, 140), Theme.Blue, hover), 1.2f))
                         g.DrawPath(pen, path);
@@ -123,8 +157,9 @@ namespace EmiliosSoundboard
             }
 
             using (var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-            using (var textBrush = new SolidBrush(Theme.CoolWhite))
+            using (var textBrush = new SolidBrush(Theme.ComicStyleMode ? Color.Black : Theme.CoolWhite))
                 g.DrawString(Text, Font, textBrush, r, fmt);
+            g.Restore(saved);
         }
 
         protected override void Dispose(bool disposing)
@@ -215,17 +250,21 @@ namespace EmiliosSoundboard
             var track = new RectangleF(4, 4, Width - 8f, h);
             using (var path = Theme.RoundedRect(track, h / 2f))
             {
-                Color off = Color.FromArgb(34, 42, 78);
-                using (var br = new LinearGradientBrush(track, Theme.Mix(off, Theme.Blue, pos), Theme.Mix(off, Theme.Violet, pos), 0f))
+                Color off = Theme.ComicStyleMode ? Color.White : Color.FromArgb(34, 42, 78);
+                Color on = Theme.ComicStyleMode ? Color.Black : Theme.Blue;
+                Color on2 = Theme.ComicStyleMode ? Color.FromArgb(185, 185, 185) : Theme.Violet;
+                using (var br = new LinearGradientBrush(track, Theme.Mix(off, on, pos), Theme.Mix(off, on2, pos), 0f))
                     g.FillPath(br, path);
-                using (var pen = new Pen(Theme.Mix(Color.FromArgb(70, 84, 140), Color.FromArgb(160, 190, 255), pos), Focused ? 2f : 1f))
+                using (var pen = new Pen(Theme.ComicStyleMode ? Color.Black : Theme.Mix(Color.FromArgb(70, 84, 140), Color.FromArgb(160, 190, 255), pos), Theme.ComicStyleMode ? 2.5f : (Focused ? 2f : 1f)))
                     g.DrawPath(pen, path);
             }
 
             float knob = h - 6f;
             float x = track.X + 3f + (track.Width - knob - 6f) * pos;
-            using (var br = new SolidBrush(Color.FromArgb(250, Theme.CoolWhite)))
+            using (var br = new SolidBrush(Theme.ComicStyleMode ? Color.White : Color.FromArgb(250, Theme.CoolWhite)))
                 g.FillEllipse(br, x, track.Y + 3f, knob, knob);
+            if (Theme.ComicStyleMode)
+                using (var ink = new Pen(Color.Black, 1.8f)) g.DrawEllipse(ink, x, track.Y + 3f, knob, knob);
         }
 
         protected override void Dispose(bool disposing)
@@ -317,14 +356,17 @@ namespace EmiliosSoundboard
 
             var track = new RectangleF(TrackLeft, cy - 3f, TrackRight - TrackLeft, 6f);
             using (var path = Theme.RoundedRect(track, 3f))
-            using (var br = new SolidBrush(Color.FromArgb(40, 48, 86)))
+            using (var br = new SolidBrush(Theme.ComicStyleMode ? Color.White : Color.FromArgb(40, 48, 86)))
+            {
                 g.FillPath(br, path);
+                if (Theme.ComicStyleMode) using (var ink = new Pen(Color.Black, 1.8f)) g.DrawPath(ink, path);
+            }
 
             if (x - TrackLeft > 1f)
             {
                 var fill = new RectangleF(TrackLeft, cy - 3f, x - TrackLeft, 6f);
                 using (var path = Theme.RoundedRect(fill, 3f))
-                using (var br = new LinearGradientBrush(new RectangleF(TrackLeft, 0, Math.Max(2f, TrackRight - TrackLeft), 10), Theme.Blue, Theme.Violet, 0f))
+                using (var br = new LinearGradientBrush(new RectangleF(TrackLeft, 0, Math.Max(2f, TrackRight - TrackLeft), 10), Theme.ComicStyleMode ? Color.Black : Theme.Blue, Theme.ComicStyleMode ? Color.FromArgb(150, 150, 150) : Theme.Violet, 0f))
                     g.FillPath(br, path);
             }
 
@@ -332,15 +374,87 @@ namespace EmiliosSoundboard
             for (int i = 3; i >= 1; i--)
             {
                 float rad = 8f + i * 3f;
-                using (var br = new SolidBrush(Theme.WithAlpha(Theme.Blue, (int)(glow * 22f / i))))
+                Color glowColor = Theme.ComicStyleMode ? Color.Black : Theme.Blue;
+                using (var br = new SolidBrush(Theme.WithAlpha(glowColor, (int)(glow * (Theme.ComicStyleMode ? 14f : 22f) / i))))
                     g.FillEllipse(br, x - rad, cy - rad, rad * 2f, rad * 2f);
             }
-            using (var br = new SolidBrush(Theme.CoolWhite))
+            using (var br = new SolidBrush(Theme.ComicStyleMode ? Color.Black : Theme.CoolWhite))
                 g.FillEllipse(br, x - 8f, cy - 8f, 16f, 16f);
             if (Focused)
-                using (var pen = new Pen(Theme.Blue, 1.5f))
+                using (var pen = new Pen(Theme.ComicStyleMode ? Color.Black : Theme.Blue, Theme.ComicStyleMode ? 2f : 1.5f))
                     g.DrawEllipse(pen, x - 10f, cy - 10f, 20f, 20f);
         }
+    }
+
+    /// <summary>A compact animated rainbow label used by the Rainbow Road mode indicator.</summary>
+    internal sealed class RainbowTextLabel : Control
+    {
+        private readonly Timer rainbowTimer = new Timer { Interval = 45 };
+        private float phase;
+        private bool animated;
+
+        public bool Animated
+        {
+            get { return animated; }
+            set
+            {
+                animated = value;
+                if (animated) rainbowTimer.Start(); else rainbowTimer.Stop();
+                Invalidate();
+            }
+        }
+
+        public RainbowTextLabel()
+        {
+            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
+                     ControlStyles.UserPaint | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+            ForeColor = Theme.Blue;
+            Font = Theme.MakeFont(10f, FontStyle.Bold);
+            rainbowTimer.Tick += (s, e) => { phase = (phase + 7f) % 360f; Invalidate(); };
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            // SupportsTransparentBackColor delegates the background painting to the parent.
+            base.OnPaintBackground(e);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            float x = 0f;
+            for (int i = 0; i < Text.Length; i++)
+            {
+                string ch = Text[i].ToString();
+                float width = g.MeasureString(ch, Font, 400, StringFormat.GenericTypographic).Width;
+                if (ch != " ")
+                {
+                    if (Theme.ComicStyleMode)
+                    {
+                        // Comic Book Mode is strict black-and-white, even while Cool Mode is active.
+                        using (var ink = new SolidBrush(Color.Black))
+                            g.DrawString(ch, Font, ink, x, 0f, StringFormat.GenericTypographic);
+                    }
+                    else if (animated)
+                    {
+                        using (var brush = new SolidBrush(Theme.RainbowColor(phase + i * 22f)))
+                            g.DrawString(ch, Font, brush, x, 0f, StringFormat.GenericTypographic);
+                    }
+                    else
+                    {
+                        using (var brush = new SolidBrush(ForeColor))
+                            g.DrawString(ch, Font, brush, x, 0f, StringFormat.GenericTypographic);
+                    }
+                }
+                x += width;
+            }
+        }
+
+        protected override void OnTextChanged(EventArgs e) { Invalidate(); base.OnTextChanged(e); }
+        protected override void OnFontChanged(EventArgs e) { Invalidate(); base.OnFontChanged(e); }
+        protected override void Dispose(bool disposing) { if (disposing) rainbowTimer.Dispose(); base.Dispose(disposing); }
     }
 
     /// <summary>Base class for the app's dialogs: dark gradient, dark title bar, no designer needed.</summary>
@@ -386,14 +500,16 @@ namespace EmiliosSoundboard
             WindowEffects.Apply(this, BackdropEffect);
         }
 
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            if (Theme.ComicStyleMode) Theme.ApplyComicTypography(this);
+        }
+
         protected override void OnPaintBackground(PaintEventArgs e)
         {
-            var g = e.Graphics;
-            using (var br = new LinearGradientBrush(ClientRectangle, Color.FromArgb(4, 6, 16), Color.FromArgb(10, 14, 38), 90f))
-                g.FillRectangle(br, ClientRectangle);
-
-            using (var pen = new Pen(Color.FromArgb(70, Theme.Blue), 2f))
-                g.DrawLine(pen, 0, 0, ClientSize.Width, 0);
+            // Keep the space backdrop full-bleed; no decorative outline around the window.
+            SpaceBackdropPainter.Draw(e.Graphics, ClientRectangle, 0.8f);
         }
 
         protected Label MakeLabel(string text, float points, FontStyle style, Color color)

@@ -36,6 +36,8 @@ namespace EmiliosSoundboard.Tests
             Assert.Equal(60, s.Intensity);
             Assert.Equal("Blue", s.AccentColor);
             Assert.Equal("Mica", s.WindowEffect);
+            Assert.Equal("", s.OutputDevice);
+            Assert.False(s.VerboseLogging);
             Assert.Equal(70, s.SoundVolume);
             Assert.Equal(55, s.MusicVolume);
         }
@@ -63,6 +65,8 @@ namespace EmiliosSoundboard.Tests
                 Volume = 1,
                 SoundVolume = 2,
                 MusicVolume = 3,
+                OutputDevice = "CABLE Input",
+                VerboseLogging = true,
             };
 
             s.ResetToDefaults();
@@ -73,6 +77,8 @@ namespace EmiliosSoundboard.Tests
             Assert.Equal(60, s.Intensity);
             Assert.Equal("Blue", s.AccentColor);
             Assert.Equal("Mica", s.WindowEffect);
+            Assert.Equal("", s.OutputDevice);
+            Assert.False(s.VerboseLogging);
             Assert.False(s.CoolMode);
             Assert.False(s.DesktopPetEnabled);
             Assert.Equal("", s.DesktopPetImagePath);

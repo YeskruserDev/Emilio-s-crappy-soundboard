@@ -96,6 +96,9 @@ namespace EmiliosSoundboard
                     LoadWarning = "Your saved sound list could not be read, so the app started with an empty list." +
                                   (backup != null ? "\n\nA copy of the damaged file was kept here:\n" + backup : "") +
                                   "\n\nYour imported audio files are still in:\n" + SoundsDir;
+
+                    Log.Error("storage", "library.xml could not be read" +
+                                         (backup != null ? "; damaged copy kept at " + backup : ""), null);
                 }
             }
 
@@ -107,6 +110,8 @@ namespace EmiliosSoundboard
         {
             if (Data.Settings == null) Data.Settings = new AppSettings();
             Data.Settings.Intensity = Math.Max(0, Math.Min(100, Data.Settings.Intensity));
+            if (string.IsNullOrWhiteSpace(Data.Settings.WindowResolution)) Data.Settings.WindowResolution = "Unlocked";
+            if (Data.Settings.SoundOutputDeviceId == null) Data.Settings.SoundOutputDeviceId = "";
             if (Data.Sounds == null) Data.Sounds = new List<SoundItem>();
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -172,6 +177,7 @@ namespace EmiliosSoundboard
             catch (Exception ex)
             {
                 LastSaveError = ex.Message;
+                Log.Error("storage", "saving library.xml failed: " + ex.Message, ex);
                 return false;
             }
         }

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -9,6 +11,23 @@ namespace EmiliosSoundboard
     /// <summary>Colours, fonts and small drawing/maths helpers shared by the whole app.</summary>
     internal static class Theme
     {
+        public static bool ComicStyleMode { get; set; }
+
+        private sealed class SavedFont
+        {
+            public string Family;
+            public float Size;
+            public FontStyle Style;
+            public GraphicsUnit Unit;
+            public byte CharSet;
+            public bool Vertical;
+            public Color BackColor;
+            public Color ForeColor;
+        }
+
+        private static readonly ConditionalWeakTable<Control, SavedFont> savedFonts =
+            new ConditionalWeakTable<Control, SavedFont>();
+
         public static readonly Color Black = Color.FromArgb(2, 3, 8);
         public static readonly Color DeepNavy = Color.FromArgb(6, 10, 26);
         public static Color PanelFill = Color.FromArgb(11, 16, 38);
@@ -29,7 +48,84 @@ namespace EmiliosSoundboard
         // so its fonts are sized in pixels (otherwise text would be scaled twice on high-DPI screens).
         public static Font MakeLogicalFont(float points, FontStyle style = FontStyle.Regular, string family = "Comic Sans MS")
         {
+            if (ComicStyleMode)
+            {
+                family = "Comic Sans MS";
+                style |= FontStyle.Bold;
+            }
             return new Font(family, points * 96f / 72f, style, GraphicsUnit.Pixel);
+        }
+
+        /// <summary>Applies comic typography recursively while preserving each control's original font spec.</summary>
+        public static void ApplyComicTypography(Control root)
+        {
+            if (root == null) return;
+            var controls = new List<Control>();
+            CollectControls(root, controls);
+            // Snapshot every original font before replacing any parent font, so inherited child fonts
+            // are not accidentally captured after a parent has already been restyled.
+            foreach (Control control in controls)
+            {
+                if (control == null) continue;
+                savedFonts.GetValue(control, c => new SavedFont
+                {
+                    Family = c.Font.Name,
+                    Size = c.Font.Size,
+                    Style = c.Font.Style,
+                    Unit = c.Font.Unit,
+                    CharSet = c.Font.GdiCharSet,
+                    Vertical = c.Font.GdiVerticalFont,
+                    BackColor = c.BackColor,
+                    ForeColor = c.ForeColor
+                });
+            }
+            foreach (Control control in controls)
+            {
+                if (control == null || control.IsDisposed) continue;
+                SavedFont original;
+                if (!savedFonts.TryGetValue(control, out original)) continue;
+                string family = ComicStyleMode ? "Comic Sans MS" : original.Family;
+                FontStyle style = ComicStyleMode ? (original.Style | FontStyle.Bold) : original.Style;
+                try { control.Font = new Font(family, original.Size, style, original.Unit, original.CharSet, original.Vertical); }
+                catch { control.Font = new Font("Comic Sans MS", 9.5f, ComicStyleMode ? FontStyle.Bold : FontStyle.Regular); }
+                if (ComicStyleMode && (control is TextBoxBase || control is ComboBox || control is ListBox || control is ListView))
+                {
+                    control.BackColor = Color.White;
+                    control.ForeColor = Color.Black;
+                }
+                else if (ComicStyleMode && (control is Label || control is LinkLabel))
+                {
+                    control.BackColor = original.BackColor;
+                    control.ForeColor = Color.Black;
+                }
+                else
+                {
+                    control.BackColor = original.BackColor;
+                    control.ForeColor = original.ForeColor;
+                }
+            }
+        }
+
+        private static void CollectControls(Control root, List<Control> controls)
+        {
+            controls.Add(root);
+            foreach (Control child in root.Controls) CollectControls(child, controls);
+        }
+
+        /// <summary>Returns a vivid hue-cycled colour used by animated rainbow labels.</summary>
+        public static Color RainbowColor(float hueDegrees)
+        {
+            double h = ((hueDegrees % 360f) + 360f) % 360f;
+            double c = 1.0;
+            double x = c * (1.0 - Math.Abs((h / 60.0) % 2.0 - 1.0));
+            double r = 0, g = 0, b = 0;
+            if (h < 60) { r = c; g = x; }
+            else if (h < 120) { r = x; g = c; }
+            else if (h < 180) { g = c; b = x; }
+            else if (h < 240) { g = x; b = c; }
+            else if (h < 300) { r = x; b = c; }
+            else { r = c; b = x; }
+            return Color.FromArgb(255, (int)(r * 255), (int)(g * 255), (int)(b * 255));
         }
 
         // ------------------------------------------------------------------ maths
@@ -126,6 +222,21 @@ namespace EmiliosSoundboard
             }
         }
 
+        public static void DrawRainbowSpaced(Graphics g, string text, Font font, float x, float y, float spacing, float phase)
+        {
+            float cx = x;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (ch != ' ')
+                {
+                    using (var b = new SolidBrush(RainbowColor(phase + i * 25f)))
+                        g.DrawString(ch.ToString(), font, b, cx, y, StringFormat.GenericTypographic);
+                }
+                cx += CharWidth(ch, font) + spacing;
+            }
+        }
+
         // Character widths are measured once on a private, unscaled surface and cached.
         private static readonly System.Collections.Generic.Dictionary<string, float> widthCache =
             new System.Collections.Generic.Dictionary<string, float>();
@@ -179,8 +290,10 @@ namespace EmiliosSoundboard
                 if (DwmSetWindowAttribute(form.Handle, 20, ref on, 4) != 0)
                     DwmSetWindowAttribute(form.Handle, 19, ref on, 4);
 
-                int caption = (22 << 16) | (10 << 8) | 8; // COLORREF 0x00BBGGRR, Windows 11 only
-                DwmSetWindowAttribute(form.Handle, 35, ref caption, 4);
+                int caption = (22 << 16) | (10 << 8) | 8; // Deep navy COLORREF (0x00BBGGRR).
+                DwmSetWindowAttribute(form.Handle, 35, ref caption, 4); // DWMWA_CAPTION_COLOR
+                int textColor = 0x00FFFFFF;
+                DwmSetWindowAttribute(form.Handle, 36, ref textColor, 4); // DWMWA_TEXT_COLOR
             }
             catch
             {

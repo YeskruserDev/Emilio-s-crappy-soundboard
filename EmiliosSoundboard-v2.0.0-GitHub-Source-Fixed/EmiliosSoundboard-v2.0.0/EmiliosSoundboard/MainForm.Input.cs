@@ -43,8 +43,18 @@ namespace EmiliosSoundboard
 
         private RectangleF StopPlaybackRect()
         {
-            // Reserve a wider hit target so STOP SOUND never clips at common Windows DPI scales.
-            return new RectangleF(Math.Max(8f, LW - 184f), LH - 94f, 164f, 26f);
+            // Stack STOP SOUND directly above + ADD SOUND so the two main actions are easy to find.
+            return new RectangleF(22f, LH - 91f, 116f, 28f);
+        }
+
+        private RectangleF TitleHitRect()
+        {
+            float w = LW;
+            float safeLeft = w < 760f ? 112f : 174f;
+            float safeRight = w < 760f ? w - 102f : w - 238f;
+            if (safeRight <= safeLeft + 180f) { safeLeft = 18f; safeRight = w - 90f; }
+            float safeWidth = Math.Max(180f, safeRight - safeLeft);
+            return new RectangleF(safeLeft, 18f, safeWidth, 62f);
         }
 
         private RectangleF VoiceFxRect()
@@ -61,6 +71,7 @@ namespace EmiliosSoundboard
             if (StopPlaybackRect().Contains(x, y)) { h.Kind = HitKind.StopPlayback; return h; }
             var sc = SettingsCenter();
             if (Dist(x, y, sc.X, sc.Y) <= 24f) { h.Kind = HitKind.Settings; return h; }
+            if (TitleHitRect().Contains(x, y)) { h.Kind = HitKind.Title; return h; }
 
             if (y >= GridTop && y <= GridBottom)
             {
@@ -200,14 +211,21 @@ namespace EmiliosSoundboard
                     ShowSettings();
                     break;
                 case HitKind.VoiceFx:
-                    using (var voice = new VoiceFxForm()) voice.ShowDialog(this);
+                    OpenVoiceFxWindow();
                     forceFrame = true;
                     break;
                 case HitKind.StopPlayback:
                     player.Stop();
+                    localMonitorPlayer.Stop();
                     state = PlayState.Ready;
                     lastPos = TimeSpan.Zero; lastDur = TimeSpan.Zero; progressShown = 0f;
                     currentName = string.Empty;
+                    forceFrame = true;
+                    break;
+                case HitKind.Title:
+                    titleSpinElapsed = 0f;
+                    titleSpinTime = 1f;
+                    titleSpinAngle = 0f;
                     forceFrame = true;
                     break;
                 case HitKind.Card:

@@ -28,7 +28,7 @@ namespace EmiliosSoundboard
             if (!IsDisposed && store.Data.Settings.CoolMode)
             {
                 string musicPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RainbowRoad.mp3");
-                if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath); } catch { } }
+                if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath, store.Data.Settings.OutputDevice); } catch (Exception ex) { Log.Warn("audio", "cool mode music could not start", ex); } }
             }
         }
 
@@ -43,6 +43,14 @@ namespace EmiliosSoundboard
             float dt = (float)Math.Min(0.05, clock.Elapsed.TotalSeconds);
             clock.Restart();
             time += dt;
+            if (titleSpinTime > 0f)
+            {
+                titleSpinElapsed += dt;
+                titleSpinTime = Math.Max(0f, 1f - titleSpinElapsed);
+                titleSpinAngle = 360f * Math.Min(1f, titleSpinElapsed);
+                if (titleSpinTime <= 0f) { titleSpinAngle = 0f; titleSpinElapsed = 0f; }
+                forceFrame = true;
+            }
             StepDesktopPet(dt);
             if (store.Data.Settings.DesktopPetEnabled && desktopPetSprite != null) forceFrame = true;
 
@@ -161,6 +169,7 @@ namespace EmiliosSoundboard
             var set = store.Data.Settings;
             float k = set.Intensity / 100f * 1.6f;
             player.Volume = set.SoundVolume / 100f;
+            localMonitorPlayer.Volume = set.SoundVolume / 100f;
             coolMusic.Volume = set.MusicVolume / 100f;
             if (set.CoolMode != previousCoolMode)
             {
@@ -169,7 +178,7 @@ namespace EmiliosSoundboard
                 if (set.CoolMode)
                 {
                     string musicPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RainbowRoad.mp3");
-                    if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath); } catch { } }
+                    if (File.Exists(musicPath)) { try { coolMusic.Play("cool-mode-music", musicPath, store.Data.Settings.OutputDevice); } catch (Exception ex) { Log.Warn("audio", "cool mode music could not start", ex); } }
                 }
                 else coolMusic.Stop();
                 forceFrame = true;
