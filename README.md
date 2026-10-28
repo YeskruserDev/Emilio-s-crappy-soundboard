@@ -34,6 +34,7 @@ A customizable Windows soundboard with a space-inspired UI, personal sound libra
 - **Voice FX:** Live microphone pitch effects. Device and runtime testing is still recommended.
 - **Discord Rich Presence:** Show Soundboard activity in Discord when the Discord desktop app and integration are available.
 - **Personal settings:** Keep settings and imported sound data separate from the app install folder.
+- **Window material:** Optional Mica or Acrylic on the settings window (Windows 11 22H2 or newer).
 
 > **Status note:** v2.0.0 is a source release. The project still needs a successful build and runtime test on Windows before its behaviour can be considered verified. Voice FX in particular should be tested with your actual microphone and output devices.
 
@@ -86,6 +87,8 @@ The code is split into three projects: `EmiliosSoundboard.Core` (library format 
 ## Performance & benchmarking
 
 **No verified benchmark results are available yet.** I don't want to invent FPS, CPU, memory, or startup-time numbers. The graph below is a benchmark checklist—not fabricated measurements. Once measurements are collected on a real Windows machine, replace it with actual values and include the PC specs and test method.
+
+The current code is written to avoid the usual fullscreen costs: the static backdrop (gradient, photo, drifting haze) is cached and re-rendered a few times a second instead of every frame, the card list is built once per frame instead of per paint, and the paint path no longer allocates GDI+ objects per frame. Those changes reduce work by construction; they have not been measured on a real machine.
 
 ```mermaid
 xychart-beta

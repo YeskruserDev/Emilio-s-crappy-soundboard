@@ -251,13 +251,20 @@ namespace EmiliosSoundboard
 
         private static Color StarColor(int kind)
         {
-            switch (kind)
+            // Cached per accent colour: ControlPaint.Light is far too slow to run per star per frame,
+            // but the tint still has to follow an accent change.
+            if (starKindAccent != Theme.Blue)
             {
-                case 1: return ControlPaint.Light(Theme.Blue, .10f);
-                case 2: return ControlPaint.Light(Theme.Violet, .06f);
-                default: return Color.FromArgb(228, 238, 255);
+                starKindAccent = Theme.Blue;
+                starKindColors[0] = Color.FromArgb(228, 238, 255);
+                starKindColors[1] = ControlPaint.Light(Theme.Blue, .10f);
+                starKindColors[2] = ControlPaint.Light(Theme.Violet, .06f);
             }
+            return starKindColors[kind >= 0 && kind < 3 ? kind : 0];
         }
+
+        private static Color starKindAccent = Color.Empty;
+        private static readonly Color[] starKindColors = new Color[3];
 
         private Bitmap hazeBlue, hazeViolet, hazeRose, hazeDeep;
         private Color hazeAccent = Color.Empty;

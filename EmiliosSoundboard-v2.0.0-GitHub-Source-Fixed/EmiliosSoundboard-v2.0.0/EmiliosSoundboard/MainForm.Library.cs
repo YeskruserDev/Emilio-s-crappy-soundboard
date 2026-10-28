@@ -20,6 +20,7 @@ namespace EmiliosSoundboard
             var card = new Card(item);
             card.Appear = -0.07f * delayIndex;
             cards.Add(card);
+            viewReady = false;
             forceFrame = true;
         }
 
@@ -108,31 +109,72 @@ namespace EmiliosSoundboard
 
         private int VisibleCount()
         {
-            return cards.Count(c => !c.Removing && MatchesSearch(c.Item));
+            if (!viewReady) RebuildView();
+            return view.Count;
         }
 
+        /// <summary>
+        /// Duration of the audio file in ticks, cached per file name. Opening a reader is far too
+        /// expensive to do inside a sort comparison, which is what the LENGTH sort used to do
+        /// on every frame.
+        /// </summary>
         private long AudioFileBytes(SoundItem item)
         {
-            // The LENGTH tag sorts by actual playback duration when NAudio can read the format.
+            string name = item.AudioFile ?? "";
+            long cached;
+            if (durationCache.TryGetValue(name, out cached)) return cached;
+
+            long ticks;
             try
             {
-                string path = Path.Combine(store.SoundsDir, item.AudioFile ?? "");
-                using (var reader = new NAudio.Wave.AudioFileReader(path)) return reader.TotalTime.Ticks;
+                string path = Path.Combine(store.SoundsDir, name);
+                using (var reader = new NAudio.Wave.AudioFileReader(path)) ticks = reader.TotalTime.Ticks;
             }
-            catch { try { return new FileInfo(Path.Combine(store.SoundsDir, item.AudioFile ?? "")).Length; } catch { return 0L; } }
+            catch
+            {
+                try { ticks = new FileInfo(Path.Combine(store.SoundsDir, name)).Length; }
+                catch { ticks = 0L; }
+            }
+
+            durationCache[name] = ticks;
+            return ticks;
         }
 
+        /// <summary>The visible, sorted card list for the current frame. Never allocate per call.</summary>
         private IEnumerable<Card> OrderedVisibleCards()
         {
-            var q = cards.Where(c => !c.Removing && MatchesSearch(c.Item));
-            if (sortMode == "NAME A-Z") q = q.OrderBy(c => c.Item.Name, StringComparer.OrdinalIgnoreCase);
-            else if (sortMode == "LENGTH") q = q.OrderBy(c => AudioFileBytes(c.Item));
-            else if (sortMode == "TYPE") q = q.OrderBy(c => Path.GetExtension(c.Item.AudioFile ?? ""), StringComparer.OrdinalIgnoreCase);
-            return q;
+            if (!viewReady) RebuildView();
+            return view;
+        }
+
+        /// <summary>
+        /// Rebuilds the visible list. Called once per frame from the layout pass instead of the
+        /// three LINQ queries plus sort that used to run for every paint and every tick.
+        /// </summary>
+        private void RebuildView()
+        {
+            view.Clear();
+            for (int i = 0; i < cards.Count; i++)
+            {
+                Card c = cards[i];
+                if (!c.Removing && MatchesSearch(c.Item)) view.Add(c);
+            }
+
+            if (sortMode == "NAME A-Z")
+                view.Sort((a, b) => string.Compare(a.Item.Name, b.Item.Name, StringComparison.OrdinalIgnoreCase));
+            else if (sortMode == "LENGTH")
+                view.Sort((a, b) => AudioFileBytes(a.Item).CompareTo(AudioFileBytes(b.Item)));
+            else if (sortMode == "TYPE")
+                view.Sort((a, b) => string.Compare(Path.GetExtension(a.Item.AudioFile ?? ""),
+                                                  Path.GetExtension(b.Item.AudioFile ?? ""),
+                                                  StringComparison.OrdinalIgnoreCase));
+
+            viewReady = true;
         }
 
         private void LayoutCards()
         {
+            RebuildView();
             const float margin = 36f, gap = 20f, minW = 250f, maxW = 400f;
             float avail = Math.Max(200f, LW - margin);
             int cols = Math.Max(1, (int)Math.Floor((avail + gap) / (minW + gap)));
@@ -412,6 +454,7 @@ namespace EmiliosSoundboard
 
             string name = c.Item.Name;
             c.Removing = true;
+            viewReady = false;
             if (c.Appear > 1f) c.Appear = 1f;
             bool clean = store.RemoveSound(c.Item);
             SaveLibrary();
