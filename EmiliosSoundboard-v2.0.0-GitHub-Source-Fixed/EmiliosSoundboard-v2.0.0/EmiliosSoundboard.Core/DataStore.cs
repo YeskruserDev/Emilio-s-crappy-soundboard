@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -14,6 +11,11 @@ namespace EmiliosSoundboard
     /// Owns the %LOCALAPPDATA%\EmiliosSoundboard folder: loading/saving the library and copying
     /// audio and images in and out. Only files inside the app's own folders are ever deleted.
     /// </summary>
+    /// <remarks>
+    /// Deliberately free of System.Drawing so it can live in the cross-platform core assembly and
+    /// be unit-tested on any OS. Image decoding is supplied by the front end through
+    /// <see cref="ImageImporter"/>.
+    /// </remarks>
     public sealed class DataStore
     {
         public string Root { get; private set; }
@@ -29,10 +31,25 @@ namespace EmiliosSoundboard
 
         public string LastSaveError { get; private set; }
 
+        /// <summary>
+        /// Optional image pipeline. When null, imported images are copied through unchanged
+        /// instead of being re-encoded and downscaled.
+        /// </summary>
+        public IImageImporter ImageImporter { get; set; }
+
         public DataStore()
+            : this(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EmiliosSoundboard"))
         {
-            Root = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "EmiliosSoundboard");
+        }
+
+        /// <summary>Creates a store rooted at an explicit folder. Used by tests.</summary>
+        public DataStore(string root)
+        {
+            if (string.IsNullOrWhiteSpace(root))
+                throw new ArgumentException("A storage folder is required.", "root");
+
+            Root = root;
             SoundsDir = Path.Combine(Root, "Sounds");
             ImagesDir = Path.Combine(Root, "Backgrounds");
             ConfigDir = Path.Combine(Root, "Config");
@@ -221,63 +238,28 @@ namespace EmiliosSoundboard
         }
 
         /// <summary>
-        /// Reads an image without keeping the original locked, shrinks it if huge, and saves a PNG copy
-        /// in the Backgrounds folder. Returns the new file name.
+        /// Copies an image into the Backgrounds folder and returns the new file name.
+        /// The front end's <see cref="IImageImporter"/> does the decoding/resizing; without one the
+        /// file is copied through untouched so the library stays usable.
         /// </summary>
         public string ImportImage(string sourcePath)
         {
-            using (var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var src = Image.FromStream(fs, false, true))
-            {
-                ApplyExifOrientation(src);
+            if (ImageImporter != null)
+                return ImageImporter.Import(sourcePath, ImagesDir);
 
-                const int maxSide = 1400;
-                float scale = Math.Min(1f, maxSide / (float)Math.Max(src.Width, src.Height));
-                int w = Math.Max(1, (int)(src.Width * scale));
-                int h = Math.Max(1, (int)(src.Height * scale));
-
-                using (var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb))
-                {
-                    using (var g = Graphics.FromImage(bmp))
-                    {
-                        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                        g.SmoothingMode = SmoothingMode.HighQuality;
-                        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                        g.DrawImage(src, 0, 0, w, h);
-                    }
-
-                    string fileName = "bg_" + Guid.NewGuid().ToString("N") + ".png";
-                    bmp.Save(Path.Combine(ImagesDir, fileName), ImageFormat.Png);
-                    return fileName;
-                }
-            }
+            string ext = Path.GetExtension(sourcePath);
+            if (string.IsNullOrEmpty(ext)) ext = ".img";
+            string passthrough = NewImageName(ext);
+            File.Copy(sourcePath, Path.Combine(ImagesDir, passthrough), false);
+            return passthrough;
         }
 
-        private static void ApplyExifOrientation(Image img)
+        /// <summary>Builds a fresh, collision-free name for a stored background image.</summary>
+        public static string NewImageName(string extension)
         {
-            try
-            {
-                if (Array.IndexOf(img.PropertyIdList, 0x0112) < 0) return;
-                var prop = img.GetPropertyItem(0x0112);
-                int orientation = BitConverter.ToUInt16(prop.Value, 0);
-                RotateFlipType t;
-                switch (orientation)
-                {
-                    case 2: t = RotateFlipType.RotateNoneFlipX; break;
-                    case 3: t = RotateFlipType.Rotate180FlipNone; break;
-                    case 4: t = RotateFlipType.Rotate180FlipX; break;
-                    case 5: t = RotateFlipType.Rotate90FlipX; break;
-                    case 6: t = RotateFlipType.Rotate90FlipNone; break;
-                    case 7: t = RotateFlipType.Rotate270FlipX; break;
-                    case 8: t = RotateFlipType.Rotate270FlipNone; break;
-                    default: return;
-                }
-                img.RotateFlip(t);
-            }
-            catch
-            {
-                // Orientation is cosmetic; ignore problems.
-            }
+            string ext = string.IsNullOrWhiteSpace(extension) ? ".png" : extension.ToLowerInvariant();
+            if (!ext.StartsWith(".")) ext = "." + ext;
+            return "bg_" + Guid.NewGuid().ToString("N") + ext;
         }
 
         // ------------------------------------------------------------------ deleting

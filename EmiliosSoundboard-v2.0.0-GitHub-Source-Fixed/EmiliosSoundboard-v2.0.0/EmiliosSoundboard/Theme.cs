@@ -25,12 +25,6 @@ namespace EmiliosSoundboard
             return new Font("Comic Sans MS", points, style, GraphicsUnit.Point);
         }
 
-        public static Font MakeLightFont(float points)
-        {
-            // Falls back to the default font automatically if "Segoe UI Light" is not installed.
-            return new Font("Comic Sans MS", points, FontStyle.Regular, GraphicsUnit.Point);
-        }
-
         // The main board draws in "logical" 96-dpi units and scales the whole picture to the screen,
         // so its fonts are sized in pixels (otherwise text would be scaled twice on high-DPI screens).
         public static Font MakeLogicalFont(float points, FontStyle style = FontStyle.Regular, string family = "Comic Sans MS")
@@ -43,11 +37,6 @@ namespace EmiliosSoundboard
         public static float Clamp01(float v)
         {
             return v < 0f ? 0f : (v > 1f ? 1f : v);
-        }
-
-        public static float Lerp(float a, float b, float t)
-        {
-            return a + (b - a) * t;
         }
 
         public static float EaseOut(float t)
@@ -171,14 +160,6 @@ namespace EmiliosSoundboard
 
             widthCache[key] = width;
             return width;
-        }
-
-        public static string FormatTime(TimeSpan t)
-        {
-            if (t < TimeSpan.Zero) t = TimeSpan.Zero;
-            if (t.TotalHours >= 1)
-                return string.Format("{0}:{1:00}:{2:00}", (int)t.TotalHours, t.Minutes, t.Seconds);
-            return string.Format("{0:00}:{1:00}", t.Minutes, t.Seconds);
         }
 
         // ------------------------------------------------------------------ window helpers

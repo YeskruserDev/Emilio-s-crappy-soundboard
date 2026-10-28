@@ -346,16 +346,16 @@ namespace EmiliosSoundboard
     /// <summary>Base class for the app's dialogs: dark gradient, dark title bar, no designer needed.</summary>
     internal class ThemedForm : Form
     {
-        protected readonly float Scale;
+        protected readonly float ScaleFactor;
 
         protected int S(int pixels)
         {
-            return (int)Math.Round(pixels * Scale);
+            return (int)Math.Round(pixels * ScaleFactor);
         }
 
         public ThemedForm()
         {
-            Scale = Theme.DpiScale();
+            ScaleFactor = Theme.DpiScale();
             AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;

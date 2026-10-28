@@ -18,24 +18,6 @@ namespace EmiliosSoundboard
             }
         }
 
-        /// <summary>Loads a saved background and crops/scales it to fill a w x h bitmap.</summary>
-        public static Bitmap MakeCover(string path, int w, int h)
-        {
-            using (var src = LoadCopy(path))
-            {
-                var cover = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
-                using (var g = Graphics.FromImage(cover))
-                {
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    g.SmoothingMode = SmoothingMode.HighQuality;
-                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                    g.Clear(Color.FromArgb(8, 12, 28));
-                    DrawCover(g, src, new RectangleF(0, 0, w, h));
-                }
-                return cover;
-            }
-        }
-
         /// <summary>Draws the image so it completely fills dest, cropping the overflow around the centre.</summary>
         public static void DrawCover(Graphics g, Image img, RectangleF dest)
         {

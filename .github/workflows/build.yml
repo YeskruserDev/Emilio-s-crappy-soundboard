@@ -1,0 +1,49 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: EmiliosSoundboard-v2.0.0-GitHub-Source-Fixed/EmiliosSoundboard-v2.0.0
+
+jobs:
+  # The library core and its tests are plain .NET 8, so they run on Linux.
+  # This is the job that proves DataStore behaviour, not just that it compiles.
+  core-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore EmiliosSoundboard.sln
+
+      - name: Test
+        run: dotnet test EmiliosSoundboard.Tests/EmiliosSoundboard.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal"
+
+  # WinForms needs a Windows Desktop runtime to build for real, so the app and the
+  # full solution are compiled here. A clean 0-warning build is the gate.
+  windows-app:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore EmiliosSoundboard.sln
+
+      - name: Build (warnings are errors)
+        run: dotnet build EmiliosSoundboard.sln -c Release --no-restore -warnaserror
+
+      - name: Test
+        run: dotnet test EmiliosSoundboard.Tests/EmiliosSoundboard.Tests.csproj -c Release --no-build
