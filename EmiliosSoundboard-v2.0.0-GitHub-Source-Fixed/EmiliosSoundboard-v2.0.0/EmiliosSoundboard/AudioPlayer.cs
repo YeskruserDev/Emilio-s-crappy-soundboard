@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using NAudio.Wave;
 
 namespace EmiliosSoundboard
@@ -90,33 +91,61 @@ namespace EmiliosSoundboard
             }
         }
 
-        /// <summary>Starts playing from the beginning. Throws if the file cannot be played.</summary>
-        public void Play(string id, string path)
+        /// <summary>
+        /// Starts playing from the beginning on the named output device (empty = system default).
+        /// Throws if the file cannot be played.
+        /// </summary>
+        public void Play(string id, string path, string deviceName = null)
         {
             if (disposed) return;
             StopSilently();
 
             AudioFileReader reader = null;
             WaveOutEvent output = null;
+            int deviceIndex = AudioOutput.Resolve(deviceName);
+            string deviceLabel = AudioOutput.Describe(deviceIndex);
             try
             {
                 reader = new AudioFileReader(path);
-                output = new WaveOutEvent();
+                output = new WaveOutEvent { DeviceNumber = deviceIndex };
 
                 reader.Volume = volume;
                 var session = new Session { Id = id, Output = output, Reader = reader, Total = reader.TotalTime };
                 session.Handler = (sender, e) => OnStopped(session, e);
                 output.PlaybackStopped += session.Handler;
-                output.Init(reader);
+
+                try
+                {
+                    output.Init(reader);
+                }
+                catch (Exception ex) when (deviceIndex != AudioOutputPicker.DefaultIndex)
+                {
+                    // A named device can refuse to open (taken exclusively, just unplugged, driver
+                    // reset). Falling back to the default keeps the sound working.
+                    Log.Warn("audio", "could not open output device \"" + deviceLabel + "\"; retrying on the system default", ex);
+
+                    try { output.PlaybackStopped -= session.Handler; } catch { }
+                    try { output.Dispose(); } catch { }
+
+                    reader.Position = 0;
+                    output = new WaveOutEvent();
+                    session.Output = output;
+                    session.Handler = (sender, e) => OnStopped(session, e);
+                    output.PlaybackStopped += session.Handler;
+                    deviceLabel = AudioOutputPicker.SystemDefault;
+                    output.Init(reader);
+                }
 
                 current = session;
                 output.Play();
+                Log.Debug("audio", "playing \"" + Path.GetFileName(path) + "\" on " + deviceLabel);
             }
-            catch
+            catch (Exception ex)
             {
                 current = null;
                 if (output != null) { try { output.Dispose(); } catch { } }
                 if (reader != null) { try { reader.Dispose(); } catch { } }
+                Log.Error("audio", "playing \"" + Path.GetFileName(path) + "\" on " + deviceLabel + " failed", ex);
                 throw;
             }
         }
@@ -141,6 +170,9 @@ namespace EmiliosSoundboard
 
             current = null;
             string id = session.Id;
+            if (e.Exception != null)
+                Log.Error("audio", "playback of \"" + id + "\" stopped with an error", e.Exception);
+
             DisposeSession(session);
 
             var handler = Ended;

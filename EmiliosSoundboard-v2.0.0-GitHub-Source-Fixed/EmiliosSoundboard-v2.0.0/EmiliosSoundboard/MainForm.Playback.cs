@@ -27,7 +27,13 @@ namespace EmiliosSoundboard
 
             try
             {
-                player.Play(c.Item.Id, path);
+                // A per-sound device overrides the board-wide one, so one sound can go to a virtual
+                // cable while everything else stays on the speakers.
+                string device = string.IsNullOrWhiteSpace(c.Item.OutputDevice)
+                    ? store.Data.Settings.OutputDevice
+                    : c.Item.OutputDevice;
+
+                player.Play(c.Item.Id, path, device);
                 currentName = c.Item.Name;
                 state = PlayState.Playing;
                 progressShown = 0f;
@@ -39,6 +45,7 @@ namespace EmiliosSoundboard
                 state = PlayState.Error;
                 stateTimer = 3.5f;
                 ShowToast("Could not play \"" + c.Item.Name + "\": " + ex.Message, Theme.Danger);
+                Log.Error("playback", "could not play \"" + c.Item.Name + "\"", ex);
             }
             forceFrame = true;
         }

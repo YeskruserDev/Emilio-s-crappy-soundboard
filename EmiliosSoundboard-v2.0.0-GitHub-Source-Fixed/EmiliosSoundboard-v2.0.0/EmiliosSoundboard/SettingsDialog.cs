@@ -12,12 +12,14 @@ namespace EmiliosSoundboard
         private readonly DataStore store;
         private readonly AppSettings settings;
 
-        private ToggleSwitch animToggle, glowToggle, starToggle, hoverToggle, coolModeToggle, petToggle;
+        private ToggleSwitch animToggle, glowToggle, starToggle, hoverToggle, coolModeToggle, petToggle, verboseToggle;
         private GlowSlider intensity, soundVolume, musicVolume, petSize;
         private Label soundVolumeValue, musicVolumeValue, petSizeValue;
         private TextBox backgroundPath;
         private Label intensityValue;
         private ComboBox accentPicker;
+        private ComboBox outputPicker;
+        private Label outputHint, logSummary;
         private TextBox startupVideoPath, startupPhotoPath, startupSoundPath;
         private Panel contentPanel;
 
@@ -96,6 +98,34 @@ namespace EmiliosSoundboard
             musicVolume.SetBounds(left - S(10), y, width + S(20), S(30)); musicVolume.SetValueSilently(settings.MusicVolume); contentPanel.Controls.Add(musicVolume);
             musicVolume.ValueChanged += (s, e) => { settings.MusicVolume = musicVolume.Value; musicVolumeValue.Text = musicVolume.Value + "%"; };
             y += S(46);
+
+            // Output device routing: the difference between "plays on my speakers" and "plays into
+            // Discord". Names are stored, so a renumbered device list does not break the setting.
+            var outTitle = MakeLabel("SOUND OUTPUT DEVICE", 10f, FontStyle.Bold, Theme.CoolWhite);
+            outTitle.SetBounds(left, y, width - S(126), S(22)); contentPanel.Controls.Add(outTitle);
+            var refreshOut = new GlowButton { Text = "REFRESH", Style = GlowStyle.Secondary };
+            refreshOut.SetBounds(left + width - S(120), y - S(4), S(120), S(32));
+            contentPanel.Controls.Add(refreshOut);
+            y += S(24);
+            outputPicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(14, 18, 31), ForeColor = Theme.CoolWhite };
+            outputPicker.SetBounds(left, y, width, S(30));
+            contentPanel.Controls.Add(outputPicker);
+            y += S(34);
+            outputHint = MakeLabel("", 9f, FontStyle.Regular, Theme.Muted);
+            outputHint.SetBounds(left, y, width, S(34)); contentPanel.Controls.Add(outputHint);
+            y += S(38);
+            FillOutputPicker(settings.OutputDevice);
+            outputPicker.SelectedIndexChanged += (s, e) =>
+            {
+                settings.OutputDevice = SelectedOutputValue();
+                Log.Info("audio", "sound output device set to " + (string.IsNullOrEmpty(settings.OutputDevice) ? "system default" : settings.OutputDevice));
+            };
+            refreshOut.Click += (s, e) =>
+            {
+                AudioOutput.Refresh();
+                FillOutputPicker(settings.OutputDevice);
+                Log.Info("audio", "playback device list refreshed");
+            };
 
             // Easter egg mode
             var coolLabel = MakeLabel("COOL MODE  •  RAINBOW ROAD", 10f, FontStyle.Bold, Theme.Blue);
@@ -248,6 +278,39 @@ namespace EmiliosSoundboard
             contentPanel.Controls.Add(infoTitle);
             y += S(26);
 
+            // Diagnostics: everything a bug report needs lives here, so nobody has to hunt for a folder.
+            var diagTitle = MakeLabel("DIAGNOSTICS", 10f, FontStyle.Bold, Theme.Blue);
+            diagTitle.SetBounds(left, y, width, S(22));
+            contentPanel.Controls.Add(diagTitle);
+            y += S(24);
+
+            verboseToggle = AddToggleRow(ref y, left, width, "Detailed logging",
+                "Also records audio devices, imports and painting details. Use this when reporting a bug.", settings.VerboseLogging);
+            verboseToggle.CheckedChanged += (s, e) =>
+            {
+                settings.VerboseLogging = verboseToggle.Checked;
+                ApplyLogLevel();
+                RefreshLogSummary();
+                Log.Info("log", "detailed logging " + (settings.VerboseLogging ? "enabled" : "disabled"));
+            };
+
+            logSummary = MakeLabel(LogSummaryText(), 8.5f, FontStyle.Regular, Theme.Muted);
+            logSummary.AutoEllipsis = true;
+            logSummary.SetBounds(left, y, width, S(20));
+            contentPanel.Controls.Add(logSummary);
+            y += S(22);
+
+            var openLog = new GlowButton { Text = "OPEN LOG FOLDER", Style = GlowStyle.Secondary };
+            openLog.SetBounds(left - S(5), y, S(190), S(38));
+            openLog.Click += (s, e) => OpenLogFolder();
+            contentPanel.Controls.Add(openLog);
+
+            var copyLog = new GlowButton { Text = "COPY RECENT LOG", Style = GlowStyle.Secondary };
+            copyLog.SetBounds(left + S(190), y, S(190), S(38));
+            copyLog.Click += (s, e) => CopyRecentLog();
+            contentPanel.Controls.Add(copyLog);
+            y += S(48);
+
             var info = MakeLabel(BuildInfoText(), 10f, FontStyle.Regular, Theme.CoolWhite);
             info.SetBounds(left, y, width, S(44));
             contentPanel.Controls.Add(info);
@@ -343,6 +406,10 @@ namespace EmiliosSoundboard
             if (soundVolumeValue != null) soundVolumeValue.Text = settings.SoundVolume + "%";
             if (musicVolume != null) musicVolume.SetValueSilently(settings.MusicVolume);
             if (musicVolumeValue != null) musicVolumeValue.Text = settings.MusicVolume + "%";
+            if (verboseToggle != null) verboseToggle.Checked = settings.VerboseLogging;
+            ApplyLogLevel();
+            RefreshLogSummary();
+            FillOutputPicker(settings.OutputDevice);
             MainForm.ApplyAccent(settings.AccentColor);
         }
 
@@ -356,6 +423,142 @@ namespace EmiliosSoundboard
             {
                 MessageBox.Show(this, "Could not open the folder:\n" + ex.Message, "Settings",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // ------------------------------------------------------------------ output device
+
+        /// <summary>Fills the device list, keeping a vanished device visible instead of hiding it.</summary>
+        private void FillOutputPicker(string selected)
+        {
+            if (outputPicker == null) return;
+
+            string want = string.IsNullOrWhiteSpace(selected) ? AudioOutputPicker.SystemDefault : selected.Trim();
+            outputPicker.Items.Clear();
+            foreach (string name in AudioOutputPicker.Options(AudioOutput.Names(false))) outputPicker.Items.Add(name);
+
+            int index = IndexOfItem(want);
+            if (index < 0)
+            {
+                // The device was unplugged or renamed since it was chosen. Show it so the user can see
+                // what is saved, and let playback fall back to the default.
+                outputPicker.Items.Add(want);
+                index = outputPicker.Items.Count - 1;
+            }
+
+            outputPicker.SelectedIndex = index;
+            UpdateOutputHint(want, index == outputPicker.Items.Count - 1);
+        }
+
+        private int IndexOfItem(string value)
+        {
+            for (int i = 0; i < outputPicker.Items.Count; i++)
+            {
+                if (string.Equals(Convert.ToString(outputPicker.Items[i]), value, StringComparison.OrdinalIgnoreCase)) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>The value to persist: empty for the system default, otherwise the device name.</summary>
+        private string SelectedOutputValue()
+        {
+            string selected = Convert.ToString(outputPicker == null ? null : outputPicker.SelectedItem);
+            if (string.IsNullOrWhiteSpace(selected) ||
+                string.Equals(selected, AudioOutputPicker.SystemDefault, StringComparison.OrdinalIgnoreCase))
+                return "";
+            return selected.Trim();
+        }
+
+        private void UpdateOutputHint(string selected, bool missing)
+        {
+            if (outputHint == null) return;
+            int count = AudioOutput.Names(false).Count;
+
+            if (missing)
+            {
+                outputHint.ForeColor = Color.FromArgb(255, 200, 110);
+                outputHint.Text = "That device is not connected right now. Sounds will play on the system default until it comes back.";
+                return;
+            }
+
+            outputHint.ForeColor = Theme.Muted;
+            if (count == 0)
+            {
+                outputHint.Text = "No playback devices were reported. Check that Windows has an audio output enabled.";
+                return;
+            }
+
+            outputHint.Text = string.Equals(selected, AudioOutputPicker.SystemDefault, StringComparison.OrdinalIgnoreCase)
+                ? "Follows whatever Windows uses as the default output. Pick a virtual cable here to send sounds to Discord or OBS."
+                : "Sounds play on this device. Use a virtual cable to make them audible in Discord while your mic stays clean.";
+        }
+
+        // ------------------------------------------------------------------ diagnostics
+
+        private void ApplyLogLevel()
+        {
+            var logger = Log.Current;
+            if (logger != null)
+                logger.MinimumLevel = settings.VerboseLogging ? LogLevel.Debug : LogLevel.Info;
+        }
+
+        private string LogSummaryText()
+        {
+            var logger = Log.Current;
+            if (logger == null) return "Logging is not active in this session.";
+            return logger.Describe();
+        }
+
+        private void RefreshLogSummary()
+        {
+            if (logSummary != null) logSummary.Text = LogSummaryText();
+        }
+
+        private void OpenLogFolder()
+        {
+            var logger = Log.Current;
+            if (logger == null)
+            {
+                MessageBox.Show(this, "Logging is not active in this session.", "Diagnostics",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                Process.Start("explorer.exe", "\"" + logger.Directory + "\"");
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("log", "could not open the log folder", ex);
+                MessageBox.Show(this, "Could not open the log folder:\n" + logger.Directory + "\n\n" + ex.Message,
+                    "Diagnostics", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void CopyRecentLog()
+        {
+            var logger = Log.Current;
+            if (logger == null)
+            {
+                MessageBox.Show(this, "Logging is not active in this session.", "Diagnostics",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string text = logger.Tail(200);
+                if (string.IsNullOrWhiteSpace(text)) text = "(the log is empty)";
+                Clipboard.SetText(text);
+                MessageBox.Show(this, "The last 200 log lines were copied to the clipboard.\n\nPaste them into the bug report.",
+                    "Diagnostics", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("log", "copying the log to the clipboard failed", ex);
+                MessageBox.Show(this, "Could not copy the log:\n" + ex.Message, "Diagnostics",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

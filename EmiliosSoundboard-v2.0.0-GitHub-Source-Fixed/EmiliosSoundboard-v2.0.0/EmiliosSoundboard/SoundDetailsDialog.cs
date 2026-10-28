@@ -91,10 +91,28 @@ namespace EmiliosSoundboard
         private readonly TextBox nameBox;
         private readonly Label hint;
         private readonly CoverPreview preview;
+        private ComboBox devicePicker;
         private string chosenImage;
         private bool revertImage;
 
         public string SoundName { get; private set; }
+
+        /// <summary>
+        /// Device chosen for this sound: empty means "follow the board", "System default" means the
+        /// Windows default, anything else is a device name.
+        /// </summary>
+        public string OutputDevice
+        {
+            get
+            {
+                string selected = Convert.ToString(devicePicker == null ? null : devicePicker.SelectedItem);
+                if (string.IsNullOrWhiteSpace(selected)) return "";
+                if (string.Equals(selected, AudioOutputPicker.FollowBoard, StringComparison.OrdinalIgnoreCase)) return "";
+                if (string.Equals(selected, AudioOutputPicker.SystemDefault, StringComparison.OrdinalIgnoreCase))
+                    return AudioOutputPicker.SystemDefault;
+                return selected.Trim();
+            }
+        }
 
         /// <summary>Full path of a newly chosen image, or null.</summary>
         public string ChosenImagePath { get { return chosenImage; } }
@@ -103,13 +121,14 @@ namespace EmiliosSoundboard
         public bool RevertImage { get { return revertImage; } }
 
         public SoundDetailsDialog(DataStore store, string headline, string subtitle, string initialName,
-                                  string existingImagePath, bool allowSkip, string primaryText, SoundItem editing)
+                                  string existingImagePath, bool allowSkip, string primaryText, SoundItem editing,
+                                  string initialDevice = null)
         {
             this.store = store;
             this.editing = editing;
 
             Text = headline;
-            ClientSize = new Size(S(540), S(allowSkip ? 556 : 540));
+            ClientSize = new Size(S(540), S(allowSkip ? 626 : 610));
 
             int left = S(30);
             int width = ClientSize.Width - left * 2;
@@ -168,6 +187,37 @@ namespace EmiliosSoundboard
             defaultBtn.Click += (s, e) => UseDefault();
             Controls.Add(defaultBtn);
             y += S(66);
+
+            // Per-sound output device: one sound can go to a virtual cable while the rest stay on speakers.
+            var devLabel = MakeLabel("PLAYBACK DEVICE", 8.5f, FontStyle.Bold, Theme.Blue);
+            devLabel.SetBounds(left, y, width, S(20));
+            Controls.Add(devLabel);
+            y += S(24);
+
+            devicePicker = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                BackColor = Color.FromArgb(16, 22, 48),
+                ForeColor = Theme.CoolWhite,
+                Font = Theme.MakeFont(10f)
+            };
+            devicePicker.Items.Add(AudioOutputPicker.FollowBoard);
+            foreach (string name in AudioOutputPicker.Options(AudioOutput.Names(false)))
+            {
+                if (!string.Equals(name, AudioOutputPicker.SystemDefault, StringComparison.OrdinalIgnoreCase))
+                    devicePicker.Items.Add(name);
+            }
+            devicePicker.Items.Add(AudioOutputPicker.SystemDefault);
+            devicePicker.SetBounds(left, y, width, S(30));
+            SelectDevice(string.IsNullOrWhiteSpace(initialDevice) ? AudioOutputPicker.FollowBoard : initialDevice.Trim());
+            Controls.Add(devicePicker);
+            y += S(34);
+
+            var devHint = MakeLabel("Same as the board follows the global setting. A virtual cable here lets one sound reach Discord.",
+                8.5f, FontStyle.Regular, Theme.Muted);
+            devHint.SetBounds(left, y, width, S(20));
+            Controls.Add(devHint);
+            y += S(26);
 
             int btnY = ClientSize.Height - S(70);
 
@@ -249,6 +299,23 @@ namespace EmiliosSoundboard
             preview.SetImage(null);
             chosenImage = null;
             revertImage = true;
+        }
+
+        /// <summary>Selects a device by name, re-adding it when it is no longer connected.</summary>
+        private void SelectDevice(string name)
+        {
+            string want = string.IsNullOrWhiteSpace(name) ? AudioOutputPicker.FollowBoard : name.Trim();
+            for (int i = 0; i < devicePicker.Items.Count; i++)
+            {
+                if (string.Equals(Convert.ToString(devicePicker.Items[i]), want, StringComparison.OrdinalIgnoreCase))
+                {
+                    devicePicker.SelectedIndex = i;
+                    return;
+                }
+            }
+
+            devicePicker.Items.Add(want);
+            devicePicker.SelectedIndex = devicePicker.Items.Count - 1;
         }
 
         private void Confirm()

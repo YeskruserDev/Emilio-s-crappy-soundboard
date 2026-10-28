@@ -14,9 +14,15 @@ namespace EmiliosSoundboard
             {
                 client = new DiscordRpcClient(ApplicationId);
                 client.Initialize();
+                Log.Debug("discord", "rich presence connected");
                 Update(false);
             }
-            catch { try { client?.Dispose(); } catch { } }
+            catch (Exception ex)
+            {
+                // Discord being closed is normal; keep it at debug/warn so the log stays useful.
+                Log.Warn("discord", "rich presence unavailable (is the Discord desktop app running?)", ex);
+                try { client?.Dispose(); } catch { }
+            }
         }
         public void Update(bool coolMode)
         {
@@ -30,8 +36,16 @@ namespace EmiliosSoundboard
                     Timestamps = Timestamps.Now
                 });
             }
-            catch { /* Discord may be closed or Rich Presence may be disabled. */ }
+            catch (Exception ex)
+            {
+                // Discord may be closed or Rich Presence may be disabled in its settings.
+                Log.Debug("discord", "presence update failed: " + ex.Message);
+            }
         }
-        public void Dispose() { try { client?.ClearPresence(); } catch { } try { client?.Dispose(); } catch { } }
+        public void Dispose()
+        {
+            try { client?.ClearPresence(); } catch { }
+            try { client?.Dispose(); } catch { }
+        }
     }
 }

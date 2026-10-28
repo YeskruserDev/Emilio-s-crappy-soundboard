@@ -16,6 +16,12 @@ namespace EmiliosSoundboard
         /// <summary>File name (no folder) of the custom background inside the Backgrounds folder, or empty for default.</summary>
         public string ImageFile = "";
 
+        /// <summary>
+        /// Device name this sound plays through, or empty to follow the board's setting.
+        /// Names are stored, not indexes, because Windows renumbers devices when hardware changes.
+        /// </summary>
+        public string OutputDevice = "";
+
         /// <summary>Not saved. True when the audio file could not be found on disk at startup.</summary>
         [XmlIgnore]
         public bool AudioMissing;
@@ -49,6 +55,15 @@ namespace EmiliosSoundboard
         public int SoundVolume = 70;
         public int MusicVolume = 55;
 
+        /// <summary>
+        /// Output device for sounds, by name. Empty or "System default" follows the Windows default,
+        /// which is what makes routing to a virtual cable (Discord, OBS) possible.
+        /// </summary>
+        public string OutputDevice = "";
+
+        /// <summary>When true the log records Debug/Trace detail. Useful for bug reports.</summary>
+        public bool VerboseLogging = false;
+
         public void ResetToDefaults()
         {
             AnimatedBackground = true;
@@ -69,6 +84,8 @@ namespace EmiliosSoundboard
             Volume = 70;
             SoundVolume = 70;
             MusicVolume = 55;
+            OutputDevice = "";
+            VerboseLogging = false;
         }
     }
 

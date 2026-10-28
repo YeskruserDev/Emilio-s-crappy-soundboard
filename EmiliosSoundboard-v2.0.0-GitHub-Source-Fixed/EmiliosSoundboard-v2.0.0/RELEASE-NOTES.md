@@ -2,6 +2,19 @@
 
 This is the single, cumulative patch-notes file. New changes should be appended here; do not create separate release-note files for future updates.
 
+## Output device routing and a real logging system (2026-10-28)
+- **Sound output device selection.** Sounds used to go to the Windows default speaker with no way to change it, which meant the board could not feed Discord or OBS. The settings window now has a `SOUND OUTPUT DEVICE` picker (`System default` plus every playback device, with a refresh button), and each sound can override it from its edit dialog.
+- Devices are stored by **name**, not index: the index Windows reports changes when hardware is plugged in, and a stale index silently plays into the wrong device.
+- If a saved device disappears (headset unplugged, driver renamed) the app falls back to the system default, says so on the settings screen, and logs a warning instead of failing. If a device refuses to open, playback retries once on the default.
+- Cool Mode music and the startup sound follow the board device as well.
+- **Logging.** New `AppLogger`: daily files in `%LOCALAPPDATA%\EmiliosSoundboard\logs\app-YYYY-MM-DD.log`, size-based rollover, 7-day retention, level filtering, a 400-entry in-memory ring, and an exception formatter that keeps the type, message, stack and inner exceptions.
+- Logging never throws. A failed write is recorded in `LastWriteError` and the app continues.
+- Wired to `Application.ThreadException`, `AppDomain.UnhandledException` and `TaskScheduler.UnobservedTaskException`, so crashes and unobserved background failures land in the log instead of vanishing. The old single `error.log` writer is gone.
+- Failure paths now log instead of swallowing: library load/save, imports, playback, Discord presence. Startup logs the version, OS, library count and chosen device.
+- Settings has a `DIAGNOSTICS` section: a `Detailed logging` switch, a one-line log summary, `OPEN LOG FOLDER` and `COPY RECENT LOG` (last 200 lines to the clipboard). `--verbose` on the command line does the same at startup.
+- Tests: 50 -> 79. New coverage for log line format, level filtering, newline collapsing, exception formatting, ring capacity, rollover, retention purge, a blocked log folder, thread safety, the static facade without a logger, and device-name resolution (exact, case-insensitive, truncated, ambiguous, missing).
+- Unverified on Windows: the device list itself, actual playback routing to a virtual cable, and the new settings layout. All of it is compile-verified plus unit tests on the pure parts.
+
 ## Fullscreen performance pass and window material (2026-10-28)
 - The backdrop no longer re-renders its haze every frame. The drifting haze was four oversized, bilinear-filtered, alpha-blended blits, roughly 22 megapixels per frame at 1080p. It is now rendered into a cached bitmap about eight times a second and blitted 1:1 in between. While a window is being resized, painting goes straight to the screen instead of allocating a fullscreen bitmap per frame. If the cache cannot be allocated, painting falls back to the old path.
 - The visible card list is built once per frame instead of through three LINQ queries plus a sort for every tick and every paint. Offscreen cards were already skipped when drawing.

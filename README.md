@@ -34,6 +34,8 @@ A customizable Windows soundboard with a space-inspired UI, personal sound libra
 - **Voice FX:** Live microphone pitch effects. Device and runtime testing is still recommended.
 - **Discord Rich Presence:** Show Soundboard activity in Discord when the Discord desktop app and integration are available.
 - **Personal settings:** Keep settings and imported sound data separate from the app install folder.
+- **Output device routing:** Send sounds to any playback device - pick a virtual cable to make them audible in Discord or OBS, globally or per sound.
+- **Logging:** Rolling daily log with a diagnostics panel in settings (open the folder, copy the last 200 lines for a bug report).
 - **Window material:** Optional Mica or Acrylic on the settings window (Windows 11 22H2 or newer).
 
 > **Status note:** v2.0.0 is a source release. The project still needs a successful build and runtime test on Windows before its behaviour can be considered verified. Voice FX in particular should be tested with your actual microphone and output devices.
@@ -59,10 +61,10 @@ Click **`+ ADD SOUND`** in the app and import an audio file from your computer.
 
 ### Places to discover sounds
 
-- **[MyInstants](https://www.myinstants.com/)** — browse meme sounds and sound buttons. Use the site's own download option when available.
-- **[Pixabay Sound Effects](https://pixabay.com/sound-effects/)** — sound effects for projects.
-- **[Mixkit Sound Effects](https://mixkit.co/free-sound-effects/)** — curated sound-effect library.
-- **[Freesound](https://freesound.org/)** — community-uploaded audio with licenses that vary by sound.
+- **[MyInstants](https://www.myinstants.com/)** - browse meme sounds and sound buttons. Use the site's own download option when available.
+- **[Pixabay Sound Effects](https://pixabay.com/sound-effects/)** - sound effects for projects.
+- **[Mixkit Sound Effects](https://mixkit.co/free-sound-effects/)** - curated sound-effect library.
+- **[Freesound](https://freesound.org/)** - community-uploaded audio with licenses that vary by sound.
 
 **Copyright reminder:** a sound being playable or downloadable does not automatically mean you may redistribute it, include it in a public repository, or use it in monetized content. Check the individual sound's license and the source website's terms. Keep downloaded audio in your own local library unless you have permission to redistribute it. Don't upload other people's sound files to this repository without the required rights.
 
@@ -86,7 +88,7 @@ The code is split into three projects: `EmiliosSoundboard.Core` (library format 
 
 ## Performance & benchmarking
 
-**No verified benchmark results are available yet.** I don't want to invent FPS, CPU, memory, or startup-time numbers. The graph below is a benchmark checklist—not fabricated measurements. Once measurements are collected on a real Windows machine, replace it with actual values and include the PC specs and test method.
+**No verified benchmark results are available yet.** I don't want to invent FPS, CPU, memory, or startup-time numbers. The graph below is a benchmark checklist - not fabricated measurements. Once measurements are collected on a real Windows machine, replace it with actual values and include the PC specs and test method.
 
 The current code is written to avoid the usual fullscreen costs: the static backdrop (gradient, photo, drifting haze) is cached and re-rendered a few times a second instead of every frame, the card list is built once per frame instead of per paint, and the paint path no longer allocates GDI+ objects per frame. Those changes reduce work by construction; they have not been measured on a real machine.
 
@@ -110,13 +112,17 @@ If you contribute measurements, please include Windows version, CPU, RAM, audio 
 
 ## Tech stack
 
-- **C# / Windows Forms** — desktop UI
-- **.NET 8** — application runtime and build target
-- **NAudio** — audio playback and audio-device handling
-- **Discord Rich Presence** — Discord activity integration
-- **WPF media components** — used by the startup media implementation
+- **C# / Windows Forms** - desktop UI
+- **.NET 8** - application runtime and build target
+- **NAudio** - audio playback and audio-device handling
+- **Discord Rich Presence** - Discord activity integration
+- **WPF media components** - used by the startup media implementation
 
 ## Roadmap
+
+The full, prioritised list lives in **[ROADMAP.md](ROADMAP.md)** - P0 blockers (playback device routing, global hotkeys, installer), then soundboard core, library UX, and the unique stuff (shareable sound packs, an HTTP/Stream Deck trigger, a visualiser that reacts to audio).
+
+Short version of what's done and what's next:
 
 - [x] Searchable sound cards and sound importing
 - [x] Stop-current-sound control
@@ -124,10 +130,15 @@ If you contribute measurements, please include Windows version, CPU, RAM, audio 
 - [x] Customizable desktop pet
 - [x] Cool Mode
 - [x] Discord Rich Presence configuration
-- [ ] Verify a clean Windows x64 release build
-- [ ] Validate Voice FX with multiple microphones and output devices
-- [ ] Collect real performance and responsiveness benchmarks
-- [ ] Music-player mode (planned, not implemented yet)
+- [x] Optional Mica / Acrylic window material (Windows 11 22H2+)
+- [x] Sound output device selection, including per-sound overrides (needs Windows verification)
+- [x] Rolling log file plus a diagnostics panel in settings
+- [ ] Run the app on Windows and record what actually breaks
+- [ ] Global hotkeys, always-on-top, tray icon, single instance
+- [ ] Installer and signed release build
+- [ ] Voice FX validated with multiple microphones and output devices
+- [ ] Real performance and responsiveness benchmarks
+- [ ] Shareable sound packs, HTTP/Stream Deck triggers, audio visualiser
 
 ## Contributing
 

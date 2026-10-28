@@ -9,6 +9,8 @@ A customizable Windows soundboard built with C#, Windows Forms, .NET 8, and NAud
 - Cool Mode with Rainbow Road media
 - Desktop pet with custom image, adjustable size, wandering, pauses, looking around, jumps, and spins
 - Live microphone pitch effects (device-dependent; test on your setup)
+- Sound output device routing (global and per sound), so a virtual cable can feed Discord or OBS
+- Rolling log file with a diagnostics panel in settings
 - Discord Rich Presence integration
 - Optional Mica / Acrylic window material on the settings window (Windows 11 22H2+)
 - User settings and imported sound library stored separately from the app under `%LOCALAPPDATA%\EmiliosSoundboard`
@@ -59,12 +61,12 @@ dotnet build EmiliosSoundboard.sln -c Release
 dotnet test EmiliosSoundboard.Tests/EmiliosSoundboard.Tests.csproj -c Release
 ```
 
-The solution builds on Linux and macOS as well. The app project sets `EnableWindowsTargeting`, so it cross-compiles anywhere, but the UI itself only runs on Windows. The core and its 50 tests are platform neutral and run on any OS.
+The solution builds on Linux and macOS as well. The app project sets `EnableWindowsTargeting`, so it cross-compiles anywhere, but the UI itself only runs on Windows. The core and its 79 tests are platform neutral and run on any OS.
 
 CI (`.github/workflows/build.yml`) runs the tests on Ubuntu and does a warning-free build of the whole solution plus the tests on Windows.
 
 ## Build status
 
 - Builds clean: 0 warnings, 0 errors with the .NET 8 SDK.
-- Core tests: 50 passing.
+- Core tests: 79 passing.
 - The WinForms UI has not been run on Windows yet. Window layout, Voice FX with real audio devices and Discord presence still need runtime testing on a Windows machine.
